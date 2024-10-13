@@ -15,17 +15,16 @@ all: debug
 
 # Rules
 debug: $(SRCFILES)
+	@mkdir -p $(BUILD_DIR)
 	$(CC) $(DEBUG_FLAGS) -o $(BUILD_DIR)/$@ $^
 
 release: $(SRCFILES)
+	@mkdir -p $(BUILD_DIR)
 	$(CC) $(RELEASE_FLAGS) -o $(BUILD_DIR)/$@ $^
-
-$(BUILD_DIR):
-	@mkdir -p $@
-
 
 # Utility
 
+.PHONY: clean rebuild
 clean:
 	rm -rdf $(BUILD_DIR)
 
