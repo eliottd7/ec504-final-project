@@ -1,37 +1,41 @@
+using namespace std;
+
 #include "binfmt.h"
 
+#include <stdio.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <sys/mman.h>
 
 class ddstore {
-        ddstore(const char *path) {
- 		this.path = malloc(strlen(path));
-		stcpy(this.path, path);
+	public:
+	ddstore(const char *path) {
+ 		this->path = (char*) malloc(strlen(path));
+		strcpy(this->path, path);
 		
 		struct stat st;
 		if (stat(path,&st) != 0){
 			new_store();
 		} else {
 			fd = open(path, O_RDWR);
-			hdr = mmap(NULL, st.st_size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
+			hdr = (sthdr_t*) mmap(NULL, st.st_size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
 		}
 		
 		if (hdr->s_ident != S_IDENT){
 			printf("WARNING: s_ident does not match 0x%x",S_IDENT);
 		}
 
-		stfiletab = (void*)hdr + hdr->stfiletab;
-		basetab = (void*)hdr + hdr->basetab;
-		strtab = (void*)hdr + hdr->strtab;
+		stfiletab = (stfile_t*) addrof(hdr->stfiletab);
+		basetab = (base_t*) addrof(hdr->basetab);
 	}
 	
 	int add_document(const char *path) {
 		struct stat new_st;
-		void *ptr;
+		char *d1;
 		int fd;
 		edit_t edits[EDITS_MAX];
 		bool match;
@@ -41,18 +45,27 @@ class ddstore {
 			return -errno;
 		}
 		fd = open(path, O_RDONLY);
-		ptr = (char*) mmap(NULL, new_st.st_size, PROT_READ, MAP_SHARED, 0);
+		d1 = (char*) mmap(NULL, new_st.st_size, PROT_READ, MAP_SHARED, fd, 0);
 		
 		match = false;
 		for (int i = 0; i<n_base; i++) {
-			if (match = generate_edit_list(ptr, i, edits)) {
+			if (match = generate_edit_list(d1, new_st.st_size, i, edits)) {
 				break;
 			}
 		}
 	}
 
-	bool generate_edit_list(void *d1, int i0, edit_t *edits) {
-		// edit distance!!!
+	bool generate_edit_list(char *d1, long s1, int i0, edit_t *edits) {
+		char *d0;
+		long s0;
+
+		if (basetab[i0].offset == 0)
+			return false;
+		
+		d0 = (char*) addrof(basetab[i0].offset);
+		s0 = basetab[i0].size;
+
+				
 	}
 
 
@@ -66,16 +79,17 @@ class ddstore {
 	stfile_t *stfiletab;
 	int n_base;
 	base_t *basetab;
-	int sz_strtab;
-	char *strtab;
 
+	char *addrof(long offset) {
+		return (char*)hdr + offset;
+	}
 
 	int new_store() {
-		hdr = (ddstore_t*) malloc(sizeof(ddstore_t));
+		hdr = (sthdr_t*) malloc(sizeof(sthdr_t));
 		
 		hdr->s_ident = S_IDENT;
 		
-		int n = sizeof(ddstore_t);
+		int n = sizeof(sthdr_t);
 		
 		hdr->stfiletab = n;
 		hdr->n_stfile = INIT_STFILE;
@@ -85,12 +99,8 @@ class ddstore {
 		hdr->n_base = INIT_BASE;
 		n += sizeof(base_t) * INIT_BASE;
 
-		hdr->strtab = n;
-		hdr->n_str = INIT_STRTAB;
-		n += sizeof(char) * INIT_STRTAB;
-
 		fd = open(path, O_CREAT|O_TRUNC|O_RDWR, S_IRUSR|S_IWUSR);
 		ftruncate(fd,n);
-		write(fd, hdr, sizeof(ddstore_t));
+		write(fd, hdr, sizeof(sthdr_t));
 	}
-}
+};

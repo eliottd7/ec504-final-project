@@ -1,7 +1,7 @@
 CC = g++
 CXX = g++
 
-COMMON_CFLAGS = -std=c++20 -Wall -Werror
+COMMON_CFLAGS = -std=c++20
 DEBUG_FLAGS = $(COMMON_CFLAGS) -g -Og
 RELEASE_FLAGS = $(COMMON_CFLAGS) -O3
 

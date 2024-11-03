@@ -1,3 +1,5 @@
+using namespace std;
+
 #define S_IDENT 0xdededebe
 
 #define EDITS_MAX 10
@@ -6,6 +8,7 @@
 #define INIT_BASE 4
 #define INIT_STFILE 20
 
+// For any given structure, an offset of 0 indicates that it is not present (since this will always be the offset of the header)
 
 typedef enum { EDIT_DELETE, EDIT_INSERT, EDIT_MODIFY } EditType;
 typedef enum { FILE_DOCUMENT, FILE_DIRECTORY } FileType;
@@ -19,7 +22,7 @@ typedef struct {
 
 // A storefile. Can either be a document or a directory based on type field
 typedef struct {
-	int name; // index into string table
+	char name[16]; // name of file or directory
 	FileType type; // whether this is a document or a directory
 	int idx; // if type == FILE_DOCUMENT, is index into base array. if type == FILE_DIRECTORY, it's an index into stfiletab pointing to the first of its entries
 	edit_t edits[EDITS_MAX]; // edits to apply from base. If type == FILE_DIRECTORY. This field is meaningless
@@ -36,13 +39,11 @@ typedef struct {
 
 // store header
 typedef struct {
-	char s_ident[8]; // 0xdededebe	
-	int n_stfile; // number of entries in storefile tab
+	long s_ident; // 0xdededebe	
+	int n_stfile; 
 	long stfiletab; // offset of stfiletab
-	int n_base; // number of entries in base table
+	int n_base; // length of basetab
 	long basetab; // offset of base table
-	int n_str; // string table size
-	long strtab; // offset of string table
 } sthdr_t;
 
 
