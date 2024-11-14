@@ -27,7 +27,7 @@ release: $(SRCFILES)
 
 %.test: %.cpp
 	@mkdir -p $(TEST_DIR)
-	$(CC) $(DEBUG_FLAGS) -o $@ $<
+	$(CC) $(DEBUG_FLAGS) -I src/ -o $@ $<
 
 # Utility
 
