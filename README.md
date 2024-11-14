@@ -1,5 +1,5 @@
 # EC 504 Final Project
-Vance Raiti, Pranet Sharma, Vance Raiti, Matthew Guacho, Eliott Dinfotan
+Vance Raiti, Pranet Sharma, Linden Adamson, Matthew Guacho, Eliott Dinfotan
 
 ## Requirements
 *Chosen Project: DeDuplicator File Locker*
@@ -14,6 +14,14 @@ Minimum requirements:
 - CLI Interface: 
 	- `store -file "path/to/filename" -locker "path/to/locker"`
 	- Output: `Contents: N files, XX.X KB/MB/GB used`
+ 	- 7 commands:
+  		- locker status
+  		- add file
+  		- add file and change its name
+  		- rename file
+  		- delete file
+  		- print file to console
+  		- write file to path
 
 Chosen Extensions (up to 35% of the final grade):
 - File Deletion- 20%
