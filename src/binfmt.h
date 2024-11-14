@@ -16,7 +16,7 @@ typedef enum { FILE_DOCUMENT, FILE_DIRECTORY } FileType;
 // A a single character edit
 typedef struct {
 	EditType type;
-	char c; // The character that is inserted. If type == EDIT_MODIFY, this is meaningless.
+	char c; // The character that is inserted. If type == EDIT_DELETE, this is meaningless.
 	long offset; // Offset within document where this edit occurs. XXX we will need to decide if offset refers to the offset from the beginning of the original document, or if it refers to the offset after all previous edits have been applied
 } edit_t;
 
@@ -24,7 +24,7 @@ typedef struct {
 typedef struct {
 	char name[16]; // name of file or directory
 	FileType type; // whether this is a document or a directory
-	int idx; // if type == FILE_DOCUMENT, is index into base array. if type == FILE_DIRECTORY, it's an index into stfiletab pointing to the first of its entries
+	int idx; // if type == FILE_DOCUMENT, is index into basetab. if type == FILE_DIRECTORY, it's an index into stfiletab
 	edit_t edits[EDITS_MAX]; // edits to apply from base. If type == FILE_DIRECTORY. This field is meaningless
 } stfile_t;
 
@@ -33,7 +33,7 @@ typedef struct {
 typedef struct {
 	int refs; // number of references to this base. When this is 0, should be deleted
 	long size; // size of document
-	long offset; // offset at which this base is stored.
+	long offset; // offset at which this base is stored
 } base_t;
 
 

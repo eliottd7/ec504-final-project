@@ -11,6 +11,8 @@ using namespace std;
 #include <errno.h>
 #include <sys/mman.h>
 
+
+
 class ddstore {
 	public:
 	ddstore(const char *path) {
@@ -55,17 +57,37 @@ class ddstore {
 		}
 	}
 
-	bool generate_edit_list(char *d1, long s1, int i0, edit_t *edits) {
+	bool generate_edit_list(char *d1, long n1, int i_base, edit_t *edits) {
 		char *d0;
-		long s0;
+		long n0, i0, i1;
+		int e, j0, j1;
+		edit_t min_edits[MAX_EDIT];
 
-		if (basetab[i0].offset == 0)
+		if (basetab[i_base].offset == 0) {
 			return false;
-		
-		d0 = (char*) addrof(basetab[i0].offset);
-		s0 = basetab[i0].size;
+		}
 
-				
+		d0 = (char*) addrof(basetab[i_base].offset);
+		n0 = basetab[i_base].size;
+
+		if  (EDITS_MAX < (n1 > n0 ? n1 - n0 : n0 - n1)) {
+			return false;
+		}
+		
+		e = EDITS_MAX;
+		i0 = 0;
+		i1 = 0;
+		while (i0 < n0 && i1 < n1) {
+			if (s0[i0] == s1[i1]) { // XXX I think this can be optimized if we cast s0 and s1 to longs and compare those
+				i0++;
+				i1++;
+				continue;
+			}
+
+			j0 = i0 + e >= n0 ? n0 - i0 : e; 
+			j1 = i1 + e >= n1 ? n1 - i1 : e; 
+			min_edit_list(&min_edits, &s0[i0], &s1[i1], e);
+		}
 	}
 
 
@@ -103,4 +125,6 @@ class ddstore {
 		ftruncate(fd,n);
 		write(fd, hdr, sizeof(sthdr_t));
 	}
+
+	
 };
