@@ -12,10 +12,12 @@ using namespace std;
 #include <sys/mman.h>
 
 
-
+// de-duplicator store
 class ddstore {
 	public:
 	ddstore(const char *path) {
+		// either loads a ddstore from path
+		// or creates a new one if path does not exist
  		this->path = (char*) malloc(strlen(path));
 		strcpy(this->path, path);
 		
@@ -27,15 +29,23 @@ class ddstore {
 			hdr = (sthdr_t*) mmap(NULL, st.st_size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
 		}
 		
+		// the first 8 bytes of a ddstore are an identifier that must match our 
+		// hard-coded constant
 		if (hdr->s_ident != S_IDENT){
 			printf("WARNING: s_ident does not match 0x%x",S_IDENT);
 		}
 
 		stfiletab = (stfile_t*) addrof(hdr->stfiletab);
+		n_stfile = hdr->n_stfile;
 		basetab = (base_t*) addrof(hdr->basetab);
+		n_base = hdr->n_base;
 	}
 	
 	int add_document(const char *path) {
+		// adds the file at path as a storefile to our ddstore
+		// returns 0 on success, -1 otherwise
+		// 
+		// incomplete atm
 		struct stat new_st;
 		char *d1;
 		int fd;
@@ -43,8 +53,8 @@ class ddstore {
 		bool match;
 
 		if (stat(path, &new_st)){
-			perror("add_document: ");
-			return -errno;
+			printf("Could not access file at %s\n",path);
+			return -1
 		}
 		fd = open(path, O_RDONLY);
 		d1 = (char*) mmap(NULL, new_st.st_size, PROT_READ, MAP_SHARED, fd, 0);
@@ -58,6 +68,8 @@ class ddstore {
 	}
 
 	bool generate_edit_list(char *d1, long n1, int i_base, edit_t *edits) {
+		// given a potentially very long string, generates a list of edits
+		// between it and the base document specified by index i_base
 		char *d0;
 		long n0, i0, i1;
 		int e, j0, j1;
@@ -92,21 +104,21 @@ class ddstore {
 
 
 	private:
-	int fd;
-	sthdr_t *hdr;
-	char *path;
-	struct stat st;
+	int fd; // file descriptor of the opened ddstore file
+	sthdr_t *hdr; // store header. Points to the memory-mapped ddstore header
+	char *path; // path to the ddstore file
+	struct stat st; // stat of the ddstore file
 
-	int n_stfile;
-	stfile_t *stfiletab;
-	int n_base;
-	base_t *basetab;
+	int n_stfile; // length of the storefile table
+	stfile_t *stfiletab; // storefile table
+	int n_base; // length of the basedoc table
+	base_t *basetab; // base document table
 
-	char *addrof(long offset) {
-		return (char*)hdr + offset;
+	char *addrof(long offset) { // given an offset into the ddstore file, gives the address of it in the memory-mapped region
+		return (char*)hdr + offset; 
 	}
 
-	int new_store() {
+	int new_store() { // creates a new ddstore. Called when this->path does not exist
 		hdr = (sthdr_t*) malloc(sizeof(sthdr_t));
 		
 		hdr->s_ident = S_IDENT;
