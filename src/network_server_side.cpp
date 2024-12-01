@@ -7,6 +7,7 @@ public:
         start_accept();
     }
 
+    //Function to start listening for a connection on the specified port
     void start_accept() {
         auto new_session = std::make_shared<Session>(io_service);
         acceptor.async_accept(new_session->socket(),
@@ -38,6 +39,35 @@ public:
 
     void handle_request() {
         // Parse the request from client and perform deduplication
+        // Read the command from the buffer
+        istream is(&buffer);
+        string command;
+        getline(is, command);
+
+        // Parse the command into arguments
+        vector<string> arguments;
+        size_t pos = 0;
+        while ((pos = command.find(' ')) != string::npos) {
+            arguments.push_back(command.substr(0, pos));
+            command.erase(0, pos + 1);
+        }
+        if (!command.empty()) {
+            arguments.push_back(command);
+        }
+
+        // Process the command with CLI parser
+        try {
+            CLI_parser(arguments);
+        } catch (const string &error) {
+            // Send error back to client
+            string response = error + "\n";
+            boost::asio::write(socket, boost::asio::buffer(response));
+            return;
+        }
+
+        // Send success message back to client
+        string response = "Command executed successfully\n";
+        boost::asio::write(socket, boost::asio::buffer(response));
     }
 
 private:

@@ -1,0 +1,6 @@
+#!/bin/sh
+
+echo "Running CLI library tests"
+./test_cli_lib.test
+echo Failed $? "test(s)"
+exit $?
