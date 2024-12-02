@@ -221,3 +221,28 @@ void *DDStore::get_document(int *n, const char *diffpath) {
 
 	return (void*) doc;
 }
+
+int DDStore::delete_document(const char *diffpath) {
+	diff_t *diff;
+	int difffd;
+	
+	if (faccessat(this->dirfd, diffpath, F_OK, 0)) {
+		dprintf(2, "can't remove diff: file does not exist");
+		return 1;
+	}
+
+	difffd = openat(this->dirfd, diffpath, O_RDWR);
+	diff = (diff_t*) mmap(NULL, sizeof(diff_t), PROT_READ | PROT_WRITE, MAP_SHARED, difffd, 0);
+	
+	basetab[diff->base] -= 1;
+	if (basetab[diff->base] == 0) {
+		this->delete_base(diff->base);		
+	}
+	
+	munmap(diff,sizeof(diff_t));
+	close(difffd);
+
+	unlinkat(this->dirfd, diffpath, 0);
+
+	return 0;
+}

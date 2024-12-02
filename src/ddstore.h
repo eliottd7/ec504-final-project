@@ -46,9 +46,22 @@ private:
 	int delete_base(int i);
 
 public:
+	// opens the DDStore located at storepath. Creates one if it
+	// does not already exists.
 	DDStore(const char* storepath);
+
+	// adds a document located at docpath to the store as a diff
+	// with the path diffpath. If none of the current base documents
+	// match the new document, adds it as a base
 	int add_document(const char *diffpath, const char *docpath);
-	void *get_document(int *n, const char *docpath);
+	
+	// returns a pointer to a malloc'd buffer of the document specified
+	// by the diff at diffpath. Writes the size of the buffer, in bytes
+	// to n
+	void *get_document(int *n, const char *diffpath);
+
+	// remvoes the specified document from the store
+	int delete_document(const char *diffpath);
 };
 
 // ddstore-internal functions

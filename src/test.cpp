@@ -17,5 +17,7 @@ int main() {
 	str[n] = '\0';
 	printf("%s",str);
 
+	store.delete_document("hello.txt");
+	store.delete_document("hi.txt");
 	return 0;
 }
