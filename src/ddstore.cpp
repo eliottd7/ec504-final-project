@@ -11,89 +11,113 @@ using namespace std;
 #include <errno.h>
 #include <sys/mman.h>
 
-#define MODE (S_IRWXU|S_IRWXG|S_IROTH)
+#define DIR_MODE (S_IRWXU|S_IRWXG|S_IROTH)
+#define FILE_MODE (S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH)
 
 // de-duplicator store
-int new_ddstore(const char *path) {
-	// creates a new ddstore at path
+
+int DDStore::add_base(char *doc, long n) {
+	int i;
+	int basefd;
+	char basepath[16], *base;
+
+	i = *this->nextfreebase;
+	*this->nextfreebase++;
 	
-	struct stat st;
-	int dirfd, fd, err;
-
-	if (stat(path,&st) == 0) {
-		dprintf(2,"cannot create ddstore at %s: path already exists\n",path);
-		return 1;
+	if ((*this->nextfreebase + 1) * sizeof(int) > this->basetabst.st_size) {
+		ftruncate(basetabfd, basetabst.st_size + sizeof(int) * 16);
+		munmap(this->nextfreebase,this->basetabst.st_size);
+		
+		fstat(this->basetabfd, &this->basetabst);
+		this->nextfreebase = (int*) mmap(NULL, this->basetabst.st_size, PROT_READ | PROT_WRITE, MAP_SHARED, this->basetabfd, 0);
+		basetab = &this->nextfreebase[1];
 	}
 
-	if (mkdir(path, MODE)) {
-		perror("could not create new ddstore");	
-		return 1;
-	}
-
-	dirfd = open(path, O_DIRECTORY | O_RDONLY);
-	if (mkdirat(dirfd, "basedocs", MODE)) {
-		perror("could not create basedocs directory");
-		return 1;
-	}
+	sprintf(basepath, "%d", i);
+	basefd = openat(this->basedirfd, basepath, O_RDWR | O_CREAT | O_TRUNC, FILE_MODE);
+	ftruncate(basefd, n);
+	base = (char*) mmap(NULL, n, PROT_READ | PROT_WRITE, MAP_SHARED, basefd, 0);
+	memcpy(base, doc, n);
 	
-	dirfd = openat(dirfd, "basedocs", O_DIRECTORY | O_RDONLY);
-	fd = openat(dirfd, "basetab", O_CREAT|O_TRUNC|O_WRONLY, MODE);
-	if (fd == -1) {
-		perror("could not create basetab");
+	close(basefd);
+	munmap(base,n);
+	
+	return i;
+}
+
+int DDStore::delete_base(int i) {
+	char basepath[16];
+	
+	if (basetab[i] != 0) {
+		dprintf(2, "cannot delete: base %d refcount is not 0\n", i);
 		return 1;
 	}
-	ftruncate(fd, sizeof(int) * 2);
-	close(fd);
 
+	sprintf(basepath,"%d",i);
+	unlinkat(basedirfd,basepath,0);
 	return 0;
 }
-	
-int add_document(const char *docpath, const char *storepath) {
-	// adds the file at path as a storefile to our ddstore
+
+DDStore::DDStore(const char *storepath) {
+	int exists = !access(storepath, F_OK);
+
+	if (!exists) {
+		if (mkdir(storepath, DIR_MODE)) {
+			perror("could not create new ddstore");
+			return;
+		}
+	}
+	this->dirfd = open(storepath, O_DIRECTORY | O_RDONLY);
+	if (!exists) {
+		if (mkdirat(this->dirfd, "basedocs", DIR_MODE)) {
+			perror("could not create basedocs directory");
+			return;
+		}
+	}
+	this->basedirfd = openat(dirfd, "basedocs", O_DIRECTORY | O_RDONLY);
+	if (!exists) {
+		this->basetabfd = openat(basedirfd, "basetab", O_CREAT|O_TRUNC|O_RDWR, FILE_MODE);			
+		ftruncate(this->basetabfd, sizeof(int) * 2);
+	} else {
+		this->basetabfd = openat(basedirfd, "basetab", O_RDWR, FILE_MODE);
+	}
+
+	fstat(this->basetabfd, &this->basetabst);
+	this->nextfreebase = (int*) mmap(NULL, this->basetabst.st_size, PROT_READ | PROT_WRITE, MAP_SHARED, this->basetabfd, 0);
+	this->basetab = &this->nextfreebase[1];
+}
+
+int DDStore::add_document(const char *diffpath, const char *docpath) {
+	// adds the file at path path to the store at path docpath
 	// returns 0 on success, -1 otherwise
-	struct stat docst, basetabst, basest;
-	char *doc, *base, basepath[2], newbase; 
-	int fd, dirfd, basedirfd, basetabfd, basefd, docfd;
+	struct stat docst, diffst, basest;
+	char *doc, *base;
+	char basepath[16];
+	int docfd, basefd, difffd;
 	int i;
 	bool match;
 	edit_t edits[EDITS_MAX + 1];
-	int *basetab, *nextfreebase;
-
-	for (int i = 0; i < EDITS_MAX; i++) {
-		edits[i].type = EDIT_NOOP;
-	}
+	diff_t diff;
 
 	if (stat(docpath, &docst)){
 		perror("could not access document");
 		return 1;
 	}
-	fd = open(docpath, O_RDONLY);
-	doc = (char*) mmap(NULL, docst.st_size, PROT_READ, MAP_SHARED, fd, 0);
-	close(fd);
 
-	if ((dirfd = open(storepath, O_DIRECTORY | O_RDONLY)) == -1 ) {
-		perror("could not open store");
-		return 1;
-	}
-
-	if ((basedirfd = openat(dirfd, "basedocs", O_DIRECTORY | O_RDONLY)) == -1) {
-		perror("could not open basedocs");
-		return 1;
-	}
-	
-	if ((basetabfd = openat(basedirfd, "basetab", O_RDWR)) == -1) {
-		perror("could not open basetab");
-		return 1;
-	}
-	
-	if (faccessat(dirfd, docpath, F_OK, 0) == 0) {
+	if (faccessat(this->dirfd, diffpath, F_OK, 0) == 0) {
 		dprintf(2, "cannot add document to store. Path already exists\n");
 		return 1;
 	}
+	
+	for (int i = 0; i < EDITS_MAX; i++) {
+		edits[i].type = EDIT_NOOP;
+		edits[i].offset = -1;
+	}
 
-	fstat(basetabfd, &basetabst);
-	nextfreebase = (int*) mmap(NULL, basetabst.st_size, PROT_READ | PROT_WRITE, MAP_SHARED, basetabfd, 0);
-	basetab = &nextfreebase[1];
+	docfd = open(docpath, O_RDONLY);
+	doc = (char*) mmap(NULL, docst.st_size, PROT_READ, MAP_SHARED, docfd, 0);
+	close(docfd);
+	
 
 	match = false;
 	for (i = 0; i < *nextfreebase; i++) {
@@ -101,7 +125,7 @@ int add_document(const char *docpath, const char *storepath) {
 		if (faccessat(basedirfd, basepath, F_OK, 0) != 0)
 			continue;
 		
-		basefd = open(basepath, O_RDONLY);
+		basefd = openat(basedirfd, basepath, O_RDONLY);
 		fstat(basefd, &basest);
 		base = (char*) mmap(NULL, basest.st_size, PROT_READ, MAP_SHARED, basefd, 0);
 		
@@ -114,89 +138,60 @@ int add_document(const char *docpath, const char *storepath) {
 	}
 
 	if (!match) {
-		// create a new basetab entry with d1
-		sprintf(basepath, "%d", *nextfreebase);
-		basefd = openat(basedirfd, basepath, O_RDWR | O_CREAT | O_TRUNC, MODE);
-		
-		ftruncate(basefd, docst.st_size);
-		base = (char*) mmap(NULL, docst.st_size, PROT_READ | PROT_WRITE, MAP_SHARED, basefd, 0);
-		memcpy(base, doc, docst.st_size);
-
-		close(basefd);
-		munmap(base, docst.st_size);
-		
-		i = *nextfreebase;
-		*nextfreebase++;
-		if ((*nextfreebase + 1) * sizeof(int) > basetabst.st_size)
-			ftruncate(basetabfd, basetabst.st_size + sizeof(int) * 16);
+		i = this->add_base(doc, docst.st_size);
 	}
 
 	basetab[i] += 1;
 
-	docfd = openat(dirfd, docpath, O_CREAT | O_RDWR | O_TRUNC);
-	stfile_t s;
-	s.base = i;
-	s.n = docst.st_size;
+	diff.base = i;
+	diff.n = docst.st_size;
+	memcpy(diff.edits, edits, sizeof(edit_t) * EDITS_MAX);
 	
-	memcpy(s.edits, edits, sizeof(edit_t) * EDITS_MAX);
-	write(docfd, &s, sizeof(stfile_t));
-	close(docfd);
+	difffd = openat(dirfd, docpath, O_CREAT | O_RDWR | O_TRUNC, FILE_MODE);
+	write(difffd, &diff, sizeof(diff_t));
+	close(difffd);
 	
 	munmap(doc, docst.st_size);
-
-	close(dirfd);
-	close(basedirfd);
-	close(basetabfd);
 
 	return 0;
 }
 
-void *get_document(int *n, const char *docpath,const char *storepath) {
+void *DDStore::get_document(int *n, const char *diffpath) {
 	// retrieves file stored at path and places it into malloc'd buffer
 	// stores size of buffer in n
 	// 
 	// returns address of buffer
-	char *base, basepath[16], *buf;
-	int dirfd, basedirfd, basefd, docfd;
+	char *base, basepath[16], *doc;
 	long i1, i2;
+	struct stat basest;
+	int basefd, difffd;
 	edit_t *e;
-	stfile_t *doc;
-	struct stat docst, basest;
+	diff_t *diff;
 
-	if ((dirfd = open(storepath, O_DIRECTORY | O_RDONLY)) == -1 ) {
-		perror("could not open store");
-		return (void*) -1;
-	}
-
-	if ((basedirfd = openat(dirfd, "basedocs", O_DIRECTORY | O_RDONLY)) == -1) {
-		perror("could not open basedocs");
-		return (void*) -1;
-	}
-
-	if ((docfd = openat(dirfd, docpath, O_RDONLY)) == -1) {
-		perror("could not open document");
+	if ((difffd = openat(this->dirfd, diffpath, O_RDONLY)) == -1) {
+		perror("could not open diff");
 		return (void*) -1;
 	}
 	
-	fstat(docfd, &docst);
-	doc = (stfile_t*) mmap(NULL, docst.st_size, PROT_READ, MAP_SHARED, docfd, 0);
+	diff = (diff_t*) mmap(NULL, sizeof(diff_t), PROT_READ, MAP_SHARED, difffd, 0);
 	
-	sprintf(basepath,"%d",doc->base);
-	if ((basefd = openat(basedirfd, basepath, O_RDONLY)) == -1) {
+	sprintf(basepath, "%d", diff->base);
+	if ((basefd = openat(this->basedirfd, basepath, O_RDONLY)) == -1) {
 		perror("could not open basetab");
 		return (void*) -1;
 	}
+
 	fstat(basefd, &basest);
 	base = (char*) mmap(NULL, basest.st_size, PROT_READ, MAP_SHARED, basefd, 0);
 	
-	buf = (char*) malloc(doc->n);
+	doc = (char*) malloc(diff->n);
 
-	e = &doc->edits[0];
+	e = &diff->edits[0];
 	i1 = i2 = 0;
-	while (i1 < doc->n) {
+	while (i1 < diff->n) {
 		if (i1 == e->offset) {
 			if (e->type == EDIT_MODIFY) {
-				buf[i1] = e->c;
+				doc[i1] = e->c;
 				i1++;
 				i2++;
 			}
@@ -204,60 +199,25 @@ void *get_document(int *n, const char *docpath,const char *storepath) {
 				i2++;
 			}
 			if (e->type == EDIT_INSERT) {
-				buf[i1] = e->c;
+				doc[i1] = e->c;
 				i1++;
 			}
 
-			if (e+1 < &doc->edits[EDITS_MAX])
+			if (e+1 < &diff->edits[EDITS_MAX])
 				e++;
 		} else {
-			buf[i1] = base[i2];
+			doc[i1] = base[i2];
 			i1++;
 			i2++;
 		}
 	}
 	
-	*n = doc->n;
-	return (void*) buf;
+	*n = diff->n;
 
-}
+	close(basefd);
+	close(difffd);
+	munmap(diff, sizeof(diff_t));
+	munmap(base, basest.st_size);
 
-int generate_edit_list(char *s1, long n1, char *s2, long n2, edit_t *edits) {
-	// given two potentially very long strings, produces a list of edits
-	// to transform d1 to d2
-	// 
-	// returns 0 if it would take more than EDITS_MAX edits to 
-	
-	long i1, i2;
-	int e, j1, j2, d;
-
-	if (EDITS_MAX < (n1 > n2 ? n1 - n2 : n2 - n1)) {
-		return false;
-	}
-	
-	e = EDITS_MAX;
-	i1 = 0;
-	i2 = 0;
-	while (i1 < n1 && i2 < n2) {
-		if (s1[i1] == s2[i2]) { // XXX this could be optimized with vectorized comparisons
-			i1++;
-			i2++;
-		} else {
-			if (e == 0) {
-				return false;
-			}
-			j1 = n1 - i1 < e + 1 ? n1 - i1 : e + 1;
-			j2 = n2 - i2 < e + 1? n2 - i2 : e + 1;
-			d = edit_list(&edits[EDITS_MAX-e], &s1[i1], j1, &s2[i2], j2);
-			if (d > e) {
-				return false;
-			}
-			for (int i = EDITS_MAX-e; i < EDITS_MAX-e+d; i++) {
-				edits[i].offset += i1;
-			}
-			i1 = j1;
-			i2 = j2;
-		}
-	}
-	return true;
+	return (void*) doc;
 }
