@@ -27,9 +27,6 @@ int generate_edit_list(char *s1, long n1, char *s2, long n2, edit_t *edits) {
 			i1++;
 			i2++;
 		} else {
-			if (r == 0) {
-				return false;
-			}
 			b = 2 * r + 1;
 			j1 = b > n1 - i1 ? n1 - i1 : b;
 			j2 = b > n2 - i2 ? n2 - i2 : b;
@@ -66,39 +63,39 @@ int generate_edit_list(char *s1, long n1, char *s2, long n2, edit_t *edits) {
 	return true;
 }
 
-int dist(char *s1, int n1, char *s2, int n2, dedit_t** edits) {
+int dist(char *s1, int i1, char *s2, int i2, dedit_t** edits) {
     int opts[3];
     int cost;
-    dedit_t *e, *prev;
+    dedit_t *e, *next;
     EditType type;
 
-    if (edits[n1][n2].cost != -1) {
-        return edits[n1][n2].cost;
+    if (edits[i1][i2].cost != -1) {
+        return edits[i1][i2].cost;
     }
 
-    opts[0] = (s1[n1-1] != s2[n2-1]) + dist(s1,n1-1,s2,n2-1,edits); // modify character. Do not apply cost if characters are same
-    opts[1] = 1 + dist(s1,n1-1,s2,n2,edits); // delete character
-    opts[2] = 1 + dist(s1,n1,s2,n2-1,edits); // insert character
+    opts[0] = (s1[i1] != s2[i2]) + dist(s1,i1+1,s2,i2+1,edits); // modify character. Do not apply cost if characters are same
+    opts[1] = 1 + dist(s1,i1+1,s2,i2,edits); // delete character
+    opts[2] = 1 + dist(s1,i1,s2,i2+1,edits); // insert character
 
     if (opts[0] < opts[1] && opts[0] < opts[2]) {
         cost = opts[0];
-        type = s1[n1-1] == s2[n2-1] ? EDIT_NOOP : EDIT_MODIFY;
-        prev = &edits[n1-1][n2-1];
+        type = s1[i1] == s2[i2] ? EDIT_NOOP : EDIT_MODIFY;
+        next = &edits[i1+1][i2+1];
     } else if (opts[1] < opts[2]){
         cost = opts[1];
         type = EDIT_DELETE;
-        prev = &edits[n1-1][n2];
+        next = &edits[i1+1][i2];
     } else {
         cost = opts[2];
         type = EDIT_INSERT;
-        prev = &edits[n1][n2-1];
+        next = &edits[i1][i2+1];
     }
 
-    e = &edits[n1][n2];
-    e->i = n1-1;
+    e = &edits[i1][i2];
+    e->i = i1;
     e->type = type;
-    e->c = s2[n2-1];
-    e->prev = prev;
+    e->c = s2[i2];
+    e->next = next;
 	e->cost = cost;
 
     return e->cost;
@@ -112,44 +109,44 @@ int edit_list(edit_t* edits, char *s1, int n1, char *s2, int n2) {
         dedits[i] = (dedit_t*) malloc(sizeof(dedit_t) * (n2 + 1));
     }
 
-	dedits[0][0].cost = 0;
-	dedits[0][0].type = EDIT_NOOP;
-	dedits[0][0].prev = (dedit_t*) 0x0;
-	dedits[0][0].i = -1;
+	dedits[n1][n2].cost = 0;
+	dedits[n2][n2].type = EDIT_NOOP;
+	dedits[n1][n2].next = (dedit_t*) 0x0;
+	dedits[n1][n2].i = -1;
 
-	for (int i1 = 1; i1 < n1 + 1; i1++) {
-		dedits[i1][0].cost = i1;
-		dedits[i1][0].type = EDIT_DELETE;
-		dedits[i1][0].prev = &dedits[i1-1][0];
-		dedits[i1][0].i = i1-1;
+	for (int i1 = 0; i1 < n1; i1++) {
+		dedits[i1][n2].cost = n1-i1;
+		dedits[i1][n2].type = EDIT_DELETE;
+		dedits[i1][n2].next = &dedits[i1+1][n2];
+		dedits[i1][n2].i = i1;
 	}
 
-	for (int i2 = 1; i2 < n2 + 1; i2++) {
-		dedits[0][i2].cost = i2;
-		dedits[0][i2].c = s2[i2-1];
-		dedits[0][i2].type = EDIT_INSERT;
-		dedits[0][i2].prev = &dedits[0][i2-1];
-		dedits[0][i2].i = 0;
+	for (int i2 = 0; i2 < n2; i2++) {
+		dedits[n1][i2].cost = n2-i2;
+		dedits[n1][i2].c = s2[i2];
+		dedits[n1][i2].type = EDIT_INSERT;
+		dedits[n1][i2].next = &dedits[n1][i2+1];
+		dedits[n1][i2].i = n1;
 	}
 
-    for (int i1 = 1; i1 < n1 + 1; i1++) {
-   		for (int i2 = 1; i2 < n2 + 1; i2++) {
+    for (int i1 = 0; i1 < n1; i1++) {
+   		for (int i2 = 0; i2 < n2; i2++) {
 			dedits[i1][i2].cost = -1;
 		}
     }
 
-    int cost = dist(s1,n1,s2,n2,dedits);
+    int cost = dist(s1,0,s2,0,dedits);
 
-    dedit_t *e = &dedits[n1][n2];
-    int i = cost-1;
-    while (i >= 0) {
+    dedit_t *e = &dedits[0][0];
+    int i = 0;
+    while (i < cost) {
 		if (e->type != EDIT_NOOP) {
 			edits[i].type = e->type;
 			edits[i].offset = e->i;
 			edits[i].c = e->c;
-			i--;
+			i++;
 		}
-		e = e->prev;
+		e = e->next;
     }
     return cost;
 }
@@ -160,36 +157,13 @@ char modify[]="modify";
 char del[] = "delete"; 
 char insert[]="insert";
 
-int main(int argc, char** argv) {
-	char *s1, *s2, *ident;
-	long n1, n2;
+void print_edit_list(edit_t *edits, int n) {
+	char *ident;
 
-	if (argc != 3) {
-		dprintf(2, "usage: %s [s1] [s2]\n", argv[0]);
-		return 1;
-	}
-
-	s1 = argv[1];
-	s2 = argv[2];
-	
-	n1 = strlen(s1);
-	n2 = strlen(s2);
-
-	edit_t edits[EDITS_MAX];
-	for (edit_t *e=edits; e < &edits[EDITS_MAX]; e++) {
-		e->type = EDIT_NOOP;
-	}
-
-	if (!generate_edit_list(s1,n1,s2,n2,edits)) {
-		printf("transformation exceeded max edit distance\n");
-		return 1;
-	}
-
-	for (edit_t *e = edits; e < &edits[EDITS_MAX]; e++) {
+    for (edit_t *e = edits; e < &edits[n]; e++) {
 		switch (e->type) {
 			case EDIT_NOOP:
-				ident=noop;
-				break;
+				continue;
 			case EDIT_MODIFY:
 				ident=modify;
 				break;
@@ -202,5 +176,46 @@ int main(int argc, char** argv) {
 		}
 		printf("(%s, %c, %d)\n",ident,e->c,e->offset);
 	}
+}
+
+int main(int argc, char** argv) {
+	char *s1, *s2;
+	long n1, n2, n;
+
+	if (argc != 3) {
+		dprintf(2, "usage: %s [s1] [s2]\n", argv[0]);
+		return 1;
+	}
+
+	s1 = argv[1];
+	s2 = argv[2];
+	
+	n1 = strlen(s1);
+	n2 = strlen(s2);
+    
+    n = n1 > n2 ? n1 : n2;
+
+	edit_t edits[EDITS_MAX];
+    edit_t dedits[n];
+
+	for (edit_t *e=edits; e < &edits[EDITS_MAX]; e++) {
+		e->type = EDIT_NOOP;
+	}
+    
+    for (edit_t *e=dedits; e < &dedits[n]; e++) {
+        e->type = EDIT_NOOP;
+    }
+
+    edit_list(dedits,s1,n1,s2,n2);
+    printf("edits from base algorithm:\n");
+    print_edit_list(dedits,n);
+    printf("\n");
+
+    printf("edits from optimized algorithm:\n");
+	if (!generate_edit_list(s1,n1,s2,n2,edits)) {
+		printf("transformation exceeded max edit distance\n");
+		return 1;
+	}
+    print_edit_list(edits,EDITS_MAX);
 }
 #endif

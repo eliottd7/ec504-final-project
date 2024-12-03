@@ -19,7 +19,7 @@ struct dedit_t {
 	int i;
 	EditType type;
 	char c;
-	dedit_t *prev;
+	dedit_t *next;
 	int cost;
 };
 
