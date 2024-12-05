@@ -1,6 +1,8 @@
 #include <sys/stat.h>
 
-#define EDITS_MAX 3
+#ifndef EDITS_MAX
+#define EDITS_MAX 5
+#endif
 
 // For any given structure, an offset of 0 indicates that it is not present (since this will always be the offset of the header)
 
