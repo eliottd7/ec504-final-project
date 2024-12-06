@@ -1,5 +1,6 @@
 long convert(char* i, int x) //x is size of string
-{
+{ //code to convert the char string into a long array. Might be WIP since I havent tested in within a situation regarding the rest of the project but it works outside of it.
+//placed in a seperated file cause Im not certain where it should be placed.
     long newline[x];
     char novachar[4];
     int totalcount = x;
