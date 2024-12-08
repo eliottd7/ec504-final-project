@@ -66,6 +66,9 @@ DDStore::DDStore(const char *storepath) {
 			perror("could not create new ddstore");
 			return;
 		}
+		else {
+			dprintf(2, "ddstore created\n");
+		}
 	}
 	this->dirfd = open(storepath, O_DIRECTORY | O_RDONLY);
 	if (!exists) {
@@ -117,10 +120,9 @@ int DDStore::add_document(const char *diffpath, const char *docpath) {
 	docfd = open(docpath, O_RDONLY);
 	doc = (char*) mmap(NULL, docst.st_size, PROT_READ, MAP_SHARED, docfd, 0);
 	close(docfd);
-	
 
 	match = false;
-	for (i = 0; i < *nextfreebase; i++) {
+	for (i = 0; i < nextfreebase[1]; i++) {
 		sprintf(basepath,"%d",i);
 		if (faccessat(basedirfd, basepath, F_OK, 0) != 0)
 			continue;
