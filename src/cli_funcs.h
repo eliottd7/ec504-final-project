@@ -70,7 +70,7 @@ void locker_status(string locker_path) {
 }
 
 void add_file(string locker_path, string file_path) {
-  test_path(file_path, "file");
+  test_path(file_path);
   const char *lp = locker_path.c_str();
   DDStore dd(lp);
   const char *fp = file_path.c_str();
@@ -78,7 +78,7 @@ void add_file(string locker_path, string file_path) {
 }
 
 void add_file_change_name(string locker_path, string file_path, string file_name) {
-  test_path(file_path, "file");
+  test_path(file_path);
   // todo
 }
 
@@ -89,7 +89,7 @@ void rename_file(string locker_path, string file_name, string old_file_name) {
 
 void delete_file(string locker_path, string file_name) {
   test_dir(locker_path);
-  test_path(into_dd(locker_path, file_name), "file");
+  test_path(into_dd(locker_path, file_name));
   const char *lp = locker_path.c_str();
   DDStore dd(lp);
   const char *fp = file_name.c_str();
@@ -111,7 +111,7 @@ void retreive_to_console(string locker_path, string file_name) {
 
 void retreive_to_file(string locker_path, string file_path, string file_name) {
   test_dir(locker_path);
-  test_path(file_path, "file");
+  test_path(file_path);
   // todo
 }
 
