@@ -5,11 +5,11 @@
 #include <iostream>
 #include <stdio.h>
 #include <string>
+#include <cstring>
 #include <vector>
 
 #include <errno.h>
 #include <fcntl.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
@@ -38,11 +38,13 @@ Accepted flags:
   writes the contents of the file to filename, instead of printing to the console
 */
 
+// throws a custom error
 void CLI_error() {
     string error = "ERROR: Invalid request";
     throw error;
 }
 
+// checks that the file path is valid
 void test_path(string path) {
     fstream trying(path);
     if ( !trying ) {
@@ -51,6 +53,7 @@ void test_path(string path) {
     }
 }
 
+// checks that the directory is valid
 void test_dir(string path) {
     const char* p = path.c_str();
     int exists = !access(p, F_OK);
@@ -60,16 +63,43 @@ void test_dir(string path) {
     }
 }
 
+// converts a locker name and file name into the stored locker name
 string into_dd(string locker_path, string file_name) {
+	if (strlen(locker_path) < 1 ) {
+		throw "Empty locker path";
+	}
+	if (strlen(file_name) < 1) {
+		throw "Empty file name";
+	}
+	if (strchr(locker_path, '\n') != nullptr) {
+		throw "Invalid locker path";
+	}
+	if (strchr(locker_path, '\t') != nullptr) {
+		throw "Invalid locker path";
+	}
+	if (strchr(locker_path, '\r') != nullptr) {
+		throw "Invalid locker path";
+	}
+	if (strchr(file_name, '\n') != nullptr) {
+		throw "Invalid file name";
+	}
+	if (strchr(file_name, '\t') != nullptr) {
+		throw "Invalid file name";
+	}
+	if (strchr(file_name, '\r') != nullptr) {
+		throw "Invalid file name";
+	}
     string s = locker_path + "/" + file_name;
     return s;
 }
 
+// prints the status of the locker
 void locker_status(string locker_path) {
     const char* lp = locker_path.c_str();
     // todo
 }
 
+// inserts a file into the locker
 void add_file(string locker_path, string file_path) {
     test_path(file_path);
     const char* lp = locker_path.c_str();

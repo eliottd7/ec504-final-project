@@ -32,7 +32,7 @@ release: $(SRCFILES)
 
 %.test: %.cpp
 	@mkdir -p $(TEST_DIR)
-	$(CC) $(DEBUG_FLAGS) -I src/ -o $@ $<
+	$(CC) $(DEBUG_FLAGS) -I src/ -o $@ $(SRCFILES) $<
 
 .PHONY: network
 network: $(CLIENT_SRC) $(SERVER_SRC)
