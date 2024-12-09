@@ -34,4 +34,8 @@ build/*
 # Swap
 *.swp
 
-
+# Testing Files
+*build/debug
+hello.txt
+hi.txt
+test-store

@@ -1,30 +1,30 @@
-#include <iostream>
-#include <boost/asio.hpp>
-#include <vector>
-#include <string>
 #include "cli_funcs.h"
+#include <boost/asio.hpp>
+#include <iostream>
+#include <string>
+#include <vector>
 
 using namespace std;
 
 class Session {
 public:
-    explicit Session(boost::asio::ip::tcp::socket socket) 
-        : _socket(std::move(socket)) {}
+    explicit Session(boost::asio::ip::tcp::socket socket) : _socket(std::move(socket)) {
+    }
 
     void start() {
         std::cout << "Session started, waiting for data..." << std::endl;
-        while (true) {
+        while ( true ) {
             try {
                 // Read data synchronously
                 std::string data = read_data();
-                if (data.empty()) {
+                if ( data.empty() ) {
                     std::cout << "Client closed the connection." << std::endl;
                     break;
                 }
 
                 std::cout << "Raw data: '" << data << "'" << std::endl;
                 handle_request(data);
-            } catch (const std::exception &e) {
+            } catch ( const std::exception& e ) {
                 std::cerr << "Error: " << e.what() << std::endl;
                 break;
             }
@@ -43,13 +43,13 @@ private:
         return data;
     }
 
-    void handle_request(const std::string &command) {
+    void handle_request(const std::string& command) {
         try {
             // Parse the command
             std::vector<std::string> arguments;
             std::stringstream ss(command);
             std::string arg;
-            while (ss >> arg) {
+            while ( ss >> arg ) {
                 arguments.push_back(arg);
             }
 
@@ -57,18 +57,18 @@ private:
             CLI_parser(arguments);
 
             // Send success message back to the client
-            if (_socket.is_open()) {
+            if ( _socket.is_open() ) {
                 std::string response = "Command executed successfully\n";
                 boost::asio::write(_socket, boost::asio::buffer(response));
             }
-        } catch (const std::string &error) {
+        } catch ( const std::string& error ) {
             // Send error back to the client
-            if (_socket.is_open()) {
+            if ( _socket.is_open() ) {
                 boost::asio::write(_socket, boost::asio::buffer(error + "\n"));
             }
-        } catch (const std::exception &e) {
+        } catch ( const std::exception& e ) {
             // Handle unexpected exceptions
-            if (_socket.is_open()) {
+            if ( _socket.is_open() ) {
                 std::string error = "ERROR: Unexpected exception: ";
                 error += e.what();
                 error += "\n";
@@ -80,8 +80,8 @@ private:
 
 class StorageServer {
 public:
-    explicit StorageServer(int port) 
-        : acceptor(io_service, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port)) {}
+    explicit StorageServer(int port) : acceptor(io_service, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port)) {
+    }
 
     void run() {
         try {
@@ -96,7 +96,7 @@ public:
             Session session(std::move(socket));
             session.start();
 
-        } catch (const std::exception &e) {
+        } catch ( const std::exception& e ) {
             std::cerr << "Error: " << e.what() << std::endl;
         }
     }

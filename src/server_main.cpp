@@ -1,12 +1,12 @@
 #include "network_server_side.h"
 #include <iostream>
-#include <stdexcept>
 #include <regex>
+#include <stdexcept>
 
 using namespace std;
 
-int main(int argc, char *argv[]) {
-    if (argc != 2) {
+int main(int argc, char* argv[]) {
+    if ( argc != 2 ) {
         std::cout << "Usage: " << argv[0] << " <port>" << std::endl;
         return 1;
     }
@@ -17,10 +17,9 @@ int main(int argc, char *argv[]) {
         StorageServer server(port);
         std::cout << "Server running on port " << port << std::endl;
         server.run();
-    } catch (const std::exception &e) {
+    } catch ( const std::exception& e ) {
         std::cerr << "Error: " << e.what() << std::endl;
     }
 
     return 0;
 }
-

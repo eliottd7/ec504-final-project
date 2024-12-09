@@ -1,12 +1,23 @@
-#include <stdio.h>
 #include "ddstore.h"
 
-using namespace std;
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-int main(int argc, char **argv) {
-	if (argc != 2) {
-		return 1;
-	}
-	DDStore st = DDStore(argv[1]);
-	return 0;
+int main() {
+    int n;
+    char *doc, *str;
+
+    DDStore store = DDStore("test-store");
+    store.add_document("hello.txt", "hello.txt");
+    store.add_document("hi.txt", "hi.txt");
+    doc = (char*)store.get_document(&n, "hi.txt");
+    str = (char*)malloc(n + 1);
+    strncpy(str, doc, n);
+    str[n] = '\0';
+    printf("%s", str);
+
+    store.delete_document("hello.txt");
+    store.delete_document("hi.txt");
+    return 0;
 }

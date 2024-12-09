@@ -1,19 +1,20 @@
-#include <stdio.h>
-#include <iostream>
-#include <vector>
-#include <string>
-#include <fstream>
+#pragma once
+
 #include <filesystem>
-
-
+#include <fstream>
+#include <iostream>
 #include <stdio.h>
-#include <sys/stat.h>
+#include <string>
+#include <vector>
+
+#include <errno.h>
 #include <fcntl.h>
-#include <unistd.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <errno.h>
 #include <sys/mman.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #include "ddstore.h"
 
@@ -38,151 +39,148 @@ Accepted flags:
 */
 
 void CLI_error() {
-  string error = "ERROR: Invalid request";
-  throw error;
+    string error = "ERROR: Invalid request";
+    throw error;
 }
 
 void test_path(string path) {
-  fstream trying(path);
-  if(!trying) {
-    string error = "ERROR: Invalid file path";
-    throw error;
-  }
+    fstream trying(path);
+    if ( !trying ) {
+        string error = "ERROR: Invalid file path";
+        throw error;
+    }
 }
 
 void test_dir(string path) {
-  const char *p = path.c_str();
-  int exists = !access(p, F_OK);
-  if (!exists) {
-    string error = "ERROR: invalid directory";
-    throw error;
-  }
+    const char* p = path.c_str();
+    int exists = !access(p, F_OK);
+    if ( !exists ) {
+        string error = "ERROR: invalid directory";
+        throw error;
+    }
 }
 
 string into_dd(string locker_path, string file_name) {
-  string s = locker_path + "/" + file_name;
-  return s;
+    string s = locker_path + "/" + file_name;
+    return s;
 }
 
 void locker_status(string locker_path) {
-  const char *lp = locker_path.c_str();
-  // todo
+    const char* lp = locker_path.c_str();
+    // todo
 }
 
 void add_file(string locker_path, string file_path) {
-  test_path(file_path);
-  const char *lp = locker_path.c_str();
-  DDStore dd(lp);
-  const char *fp = file_path.c_str();
-  dd.add_document(fp, fp);
+    test_path(file_path);
+    const char* lp = locker_path.c_str();
+    DDStore dd(lp);
+    const char* fp = file_path.c_str();
+    dd.add_document(fp, fp);
 }
 
 void add_file_change_name(string locker_path, string file_path, string file_name) {
-  test_path(file_path);
-  // todo
+    test_path(file_path);
+    // todo
 }
 
 void rename_file(string locker_path, string file_name, string old_file_name) {
-  test_dir(locker_path);
-  // todo
+    test_dir(locker_path);
+    // todo
 }
 
 void delete_file(string locker_path, string file_name) {
-  test_dir(locker_path);
-  test_path(into_dd(locker_path, file_name));
-  const char *lp = locker_path.c_str();
-  DDStore dd(lp);
-  const char *fp = file_name.c_str();
-  dd.delete_document(fp);
+    test_dir(locker_path);
+    test_path(into_dd(locker_path, file_name));
+    const char* lp = locker_path.c_str();
+    DDStore dd(lp);
+    const char* fp = file_name.c_str();
+    dd.delete_document(fp);
 }
 
 void retreive_to_console(string locker_path, string file_name) {
-  test_dir(locker_path);
-  const char *lp = locker_path.c_str();
-  DDStore dd(lp);
-  const char *fp = file_name.c_str();
-  int length;
-  char *output = (char *)dd.get_document(&length, fp);
-  for(int i = 0; i < length; i++) {
-    cout << output[i];
-  }
-  cout << endl;
+    test_dir(locker_path);
+    const char* lp = locker_path.c_str();
+    DDStore dd(lp);
+    const char* fp = file_name.c_str();
+    int length;
+    char* output = (char*)dd.get_document(&length, fp);
+    for ( int i = 0; i < length; i++ ) {
+        cout << output[i];
+    }
+    cout << endl;
 }
 
 void retreive_to_file(string locker_path, string file_path, string file_name) {
-  test_dir(locker_path);
-  test_path(file_path);
-  // todo
+    test_dir(locker_path);
+    test_path(file_path);
+    // todo
 }
 
 void CLI_parser(vector<string> in) {
-  string locker_path, file_path, file_name, old_file_name;
-  string command_binary = "0000000";
-  string arg, flag;
-  vector<string> flags = {"-locker", "-add", "-rename", "-new-name", "-delete", "-retreive", "-write-to"};
-  //bool is_command;
+    string locker_path, file_path, file_name, old_file_name;
+    string command_binary = "0000000";
+    string arg, flag;
+    vector<string> flags = {"-locker", "-add", "-rename", "-new-name", "-delete", "-retreive", "-write-to"};
+    // bool is_command;
 
-  for(int j = 0; j < in.size(); j++) {
-    if(j + 1 == in.size()) {
-      CLI_error();
+    for ( int j = 0; j < in.size(); j++ ) {
+        if ( j + 1 == in.size() ) {
+            CLI_error();
+        }
+        arg = in[j];
+        // is_command = false;
+        for ( int i = 0; i < flags.size(); i++ ) {
+            flag = flags[i];
+            size_t found = arg.find(flag);
+            if ( found == 0 ) { // string matches and starts at index 0
+                if ( command_binary[i] == '1' ) {
+                    CLI_error(); // that flag was already used
+                }
+                command_binary[i] = '1';
+                // is_command = true;
+                if ( flag == "-locker" ) {
+                    locker_path = in[j + 1];
+                } else if ( (flag == "-add") || (flag == "-write-to") ) {
+                    file_path = in[j + 1];
+                } else if ( (flag == "-new-name") || (flag == "-delete") || (flag == "-retreive") ) {
+                    file_name = in[j + 1];
+                } else if ( flag == "-rename" ) {
+                    old_file_name = in[j + 1];
+                }
+            }
+        }
+        // if(!is_command) {
+        // CLI_error(); // one of the argvs didn't correspond to a flag
+        //}
     }
-    arg = in[j];
-    //is_command = false;
-    for(int i = 0; i < flags.size(); i++) {
-      flag = flags[i];
-      size_t found = arg.find(flag);
-      if(found == 0) { // string matches and starts at index 0
-        if(command_binary[i] == '1') {
-          CLI_error(); // that flag was already used
-        }
-        command_binary[i] = '1';
-        //is_command = true;
-        if(flag == "-locker") {
-          locker_path = in[j + 1];
-        }
-        else if((flag == "-add") || (flag == "-write-to")) {
-          file_path = in[j + 1];
-        }
-        else if((flag == "-new-name") || (flag == "-delete") || (flag == "-retreive")) {
-          file_name = in[j + 1];
-        }
-        else if(flag == "-rename") {
-          old_file_name = in[j + 1];
-        }
-      }
+    if ( command_binary[0] == '0' ) {
+        string error = "ERROR: Path to locker must be provided";
+        throw error;
     }
-    //if(!is_command) {
-      //CLI_error(); // one of the argvs didn't correspond to a flag
-    //}
-  }
-  if(command_binary[0] == '0') {
-    string error = "ERROR: Path to locker must be provided";
-    throw error;
-  }
 
-  switch(stoi(command_binary)) {
+    switch ( stoi(command_binary) ) {
     case 1000000: // -locker
-      locker_status(locker_path);
-      break;
+        locker_status(locker_path);
+        break;
     case 1100000: // -locker, -add
-      add_file(locker_path, file_path);
-      break;
+        add_file(locker_path, file_path);
+        break;
     case 1101000: // -locker, -add, -new-name
-      add_file_change_name(locker_path, file_path, file_name);
-      break;
+        add_file_change_name(locker_path, file_path, file_name);
+        break;
     case 1011000: // -locker, -rename, -new-name
-      rename_file(locker_path, file_name, old_file_name);
-      break;
+        rename_file(locker_path, file_name, old_file_name);
+        break;
     case 1000100: // -locker, -delete
-      delete_file(locker_path, file_name);
-      break;
+        delete_file(locker_path, file_name);
+        break;
     case 1000010: // -locker, -retrieve
-      retreive_to_console(locker_path, file_name);
-      break;
+        retreive_to_console(locker_path, file_name);
+        break;
     case 1000011: // -locker, -retrieve, -write-to
-      retreive_to_file(locker_path, file_path, file_name);
-      break;
+        retreive_to_file(locker_path, file_path, file_name);
+        break;
     default:
-      CLI_error(); // flags used don't correspond to a command
-  }
+        CLI_error(); // flags used don't correspond to a command
+    }
 }

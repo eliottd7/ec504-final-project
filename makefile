@@ -9,14 +9,14 @@ SOURCE_DIR = src
 BUILD_DIR = build
 TEST_DIR = testing
 
-SRCFILES := $(wildcard $(SOURCE_DIR)/*.cpp)
+SRCFILES := src/ddstore.cpp
 TESTFILES := $(wildcard $(TEST_DIR)/*.cpp)
 TESTBINARIES := $(TESTFILES:.cpp=.test)
 
 # Adding separate source files for De Duplicator server implementation
 
 # Server files
-SERVER_SRC = $(SOURCE_DIR)/server_main.cpp 
+SERVER_SRC = $(SOURCE_DIR)/server_main.cpp
 
 # Default Target: Debug via all
 all: debug
@@ -24,7 +24,7 @@ all: debug
 # Rules
 debug: $(SRCFILES)
 	@mkdir -p $(BUILD_DIR)
-	$(CC) $(DEBUG_FLAGS) -o $(BUILD_DIR)/$@ $^
+	$(CC) $(DEBUG_FLAGS) -o $(BUILD_DIR)/$@ src/main.cpp $^
 
 release: $(SRCFILES)
 	@mkdir -p $(BUILD_DIR)
