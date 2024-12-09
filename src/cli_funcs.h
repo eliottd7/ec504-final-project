@@ -21,19 +21,19 @@ using namespace std;
 
 /*
 Accepted flags:
--locker"path/to/locker"
+-locker "path/to/locker"
   prints to the command_binary line: Contents: N files, XX.X KB/MB/GB used, {list of names of files}
--add"path/to/filename" (in addition to -locker)
+-add "path/to/filename" (in addition to -locker)
   adds file to locker, also prints to the command_binary line locker data
--rename"name" (in addition to -locker)
+-rename "name" (in addition to -locker)
   choses a file stored in the locker to be renamed
--new-name"name" (in addition to -add or -rename)
+-new-name "name" (in addition to -add or -rename)
   changes the name of the file to that of how it will be stored in the locker
--delete"name" (in addition to -locker)
+-delete "name" (in addition to -locker)
   removes the file from the locker, also prints to the command_binary line locker data
--retrieve"name" (in addition to -locker)
+-fetch "name" (in addition to -locker)
   prints to the console the contents of the file (for uses such as piping)
--write-to"path/to/filename" (in addition to -retrieve)
+-write-to "path/to/filename" (in addition to -fetch)
   writes the contents of the file to filename, instead of printing to the console
 */
 
@@ -119,12 +119,12 @@ void CLI_parser(vector<string> in) {
   string locker_path, file_path, file_name, old_file_name;
   string command_binary = "0000000";
   string arg, flag;
-  vector<string> flags = {"-locker", "-add", "-rename", "-new-name", "-delete", "-retreive", "-write-to"};
+  vector<string> flags = {"-locker", "-add", "-rename", "-new-name", "-delete", "-fetch", "-write-to"};
   //bool is_command;
 
   for(int j = 0; j < in.size(); j++) {
     if(j + 1 == in.size()) {
-      CLI_error();
+      continue;
     }
     arg = in[j];
     //is_command = false;
@@ -143,7 +143,7 @@ void CLI_parser(vector<string> in) {
         else if((flag == "-add") || (flag == "-write-to")) {
           file_path = in[j + 1];
         }
-        else if((flag == "-new-name") || (flag == "-delete") || (flag == "-retreive")) {
+        else if((flag == "-new-name") || (flag == "-delete") || (flag == "-fetch")) {
           file_name = in[j + 1];
         }
         else if(flag == "-rename") {
@@ -159,7 +159,7 @@ void CLI_parser(vector<string> in) {
     string error = "ERROR: Path to locker must be provided";
     throw error;
   }
-
+  
   switch(stoi(command_binary)) {
     case 1000000: // -locker
       locker_status(locker_path);
@@ -176,10 +176,10 @@ void CLI_parser(vector<string> in) {
     case 1000100: // -locker, -delete
       delete_file(locker_path, file_name);
       break;
-    case 1000010: // -locker, -retrieve
+    case 1000010: // -locker, -fetch
       retreive_to_console(locker_path, file_name);
       break;
-    case 1000011: // -locker, -retrieve, -write-to
+    case 1000011: // -locker, -fetch, -write-to
       retreive_to_file(locker_path, file_path, file_name);
       break;
     default:
