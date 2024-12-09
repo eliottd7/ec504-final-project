@@ -191,7 +191,7 @@ void *DDStore::get_document(int *n, const char *diffpath) {
 	e = &diff->edits[0];
 	i1 = i2 = 0;
 	while (i1 < diff->n) {
-		if (i1 == e->offset) {
+		if (i2 == e->offset) {
 			if (e->type == EDIT_MODIFY) {
 				doc[i1] = e->c;
 				i1++;
