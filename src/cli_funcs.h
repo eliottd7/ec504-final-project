@@ -3,24 +3,37 @@
 #include <vector>
 #include <string>
 #include <fstream>
+#include <filesystem>
+
+
+#include <stdio.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <string.h>
+#include <errno.h>
+#include <sys/mman.h>
+
+#include "ddstore.h"
 
 using namespace std;
 
 /*
 Accepted flags:
--locker="path/to/locker"
+-locker"path/to/locker"
   prints to the command_binary line: Contents: N files, XX.X KB/MB/GB used, {list of names of files}
--add="path/to/filename" (in addition to -locker)
+-add"path/to/filename" (in addition to -locker)
   adds file to locker, also prints to the command_binary line locker data
--rename="name" (in addition to -locker)
+-rename"name" (in addition to -locker)
   choses a file stored in the locker to be renamed
--new-name="name" (in addition to -add or -rename)
+-new-name"name" (in addition to -add or -rename)
   changes the name of the file to that of how it will be stored in the locker
--delete="name" (in addition to -locker)
+-delete"name" (in addition to -locker)
   removes the file from the locker, also prints to the command_binary line locker data
--retrieve="name" (in addition to -locker)
+-retrieve"name" (in addition to -locker)
   prints to the console the contents of the file (for uses such as piping)
--write-to="path/to/filename" (in addition to -retrieve)
+-write-to"path/to/filename" (in addition to -retrieve)
   writes the contents of the file to filename, instead of printing to the console
 */
 
@@ -29,105 +42,124 @@ void CLI_error() {
   throw error;
 }
 
-void test_path(string path, string type) {
+void test_path(string path) {
   fstream trying(path);
   if(!trying) {
-    string error = "ERROR: Invalid " + type + " path";
+    string error = "ERROR: Invalid file path";
     throw error;
   }
 }
 
-void not_empty_name(string name) {
-  if(name.empty()) {
-    string error = "ERROR: Name must not be empty";
+void test_dir(string path) {
+  const char *p = path.c_str();
+  int exists = !access(p, F_OK);
+  if (!exists) {
+    string error = "ERROR: invalid directory";
     throw error;
   }
+}
+
+string into_dd(string locker_path, string file_name) {
+  string s = locker_path + "/" + file_name;
+  return s;
 }
 
 void locker_status(string locker_path) {
-  test_path(locker_path, "locker");
-  // do stuff
+  const char *lp = locker_path.c_str();
+  // todo
 }
 
 void add_file(string locker_path, string file_path) {
-  test_path(locker_path, "locker");
   test_path(file_path, "file");
-  // do stuff
+  const char *lp = locker_path.c_str();
+  DDStore dd(lp);
+  const char *fp = file_path.c_str();
+  dd.add_document(fp, fp);
 }
 
 void add_file_change_name(string locker_path, string file_path, string file_name) {
-  test_path(locker_path, "locker");
   test_path(file_path, "file");
-  not_empty_name(file_name);
-  // do stuff
+  // todo
 }
 
 void rename_file(string locker_path, string file_name, string old_file_name) {
-  test_path(locker_path, "locker");
-  not_empty_name(file_name);
-  not_empty_name(old_file_name);
-  // do stuff
+  test_dir(locker_path);
+  // todo
 }
 
 void delete_file(string locker_path, string file_name) {
-  test_path(locker_path, "locker");
-  not_empty_name(file_name);
-  // do stuff
+  test_dir(locker_path);
+  test_path(into_dd(locker_path, file_name), "file");
+  const char *lp = locker_path.c_str();
+  DDStore dd(lp);
+  const char *fp = file_name.c_str();
+  dd.delete_document(fp);
 }
 
 void retreive_to_console(string locker_path, string file_name) {
-  test_path(locker_path, "locker");
-  not_empty_name(file_name);
-  // do stuff
+  test_dir(locker_path);
+  const char *lp = locker_path.c_str();
+  DDStore dd(lp);
+  const char *fp = file_name.c_str();
+  int length;
+  char *output = (char *)dd.get_document(&length, fp);
+  for(int i = 0; i < length; i++) {
+    cout << output[i];
+  }
+  cout << endl;
 }
 
 void retreive_to_file(string locker_path, string file_path, string file_name) {
-  test_path(locker_path, "locker");
+  test_dir(locker_path);
   test_path(file_path, "file");
-  not_empty_name(file_name);
-  // do stuff
+  // todo
 }
 
 void CLI_parser(vector<string> in) {
   string locker_path, file_path, file_name, old_file_name;
   string command_binary = "0000000";
-  string f;
-  vector<string> flags = {"-locker=", "-add=", "-rename=", "-new-name=", "-delete=", "-retreive=", "-write-to="};
-  bool is_command;
+  string arg, flag;
+  vector<string> flags = {"-locker", "-add", "-rename", "-new-name", "-delete", "-retreive", "-write-to"};
+  //bool is_command;
 
-  for(string c:in) {
-    is_command = false;
+  for(int j = 0; j < in.size(); j++) {
+    if(j + 1 == in.size()) {
+      CLI_error();
+    }
+    arg = in[j];
+    //is_command = false;
     for(int i = 0; i < flags.size(); i++) {
-      f = flags[i];
-      size_t found = c.find(f);
+      flag = flags[i];
+      size_t found = arg.find(flag);
       if(found == 0) { // string matches and starts at index 0
         if(command_binary[i] == '1') {
           CLI_error(); // that flag was already used
         }
         command_binary[i] = '1';
-        is_command = true;
-        if(f == "-locker=") {
-          locker_path = c.substr(f.size(), c.size());
+        //is_command = true;
+        if(flag == "-locker") {
+          locker_path = in[j + 1];
         }
-        else if((f == "-add=") || (f == "-write-to=")) {
-          file_path = c.substr(f.size(), c.size());
+        else if((flag == "-add") || (flag == "-write-to")) {
+          file_path = in[j + 1];
         }
-        else if((f == "-new-name=") || (f == "-delete=") || (f == "-retreive=")) {
-          file_name = c.substr(f.size(), c.size());
+        else if((flag == "-new-name") || (flag == "-delete") || (flag == "-retreive")) {
+          file_name = in[j + 1];
         }
-        else if(f == "-rename=") {
-          old_file_name = c.substr(f.size(), c.size());
+        else if(flag == "-rename") {
+          old_file_name = in[j + 1];
         }
       }
     }
-    if(!is_command) {
-      CLI_error(); // one of the argvs didn't correspond to a flag
-    }
+    //if(!is_command) {
+      //CLI_error(); // one of the argvs didn't correspond to a flag
+    //}
   }
   if(command_binary[0] == '0') {
     string error = "ERROR: Path to locker must be provided";
     throw error;
   }
+
   switch(stoi(command_binary)) {
     case 1000000: // -locker
       locker_status(locker_path);

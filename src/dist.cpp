@@ -17,7 +17,7 @@ int generate_edit_list(char *s1, long n1, char *s2, long n2, edit_t *edits) {
 	if (EDITS_MAX < (n1 > n2 ? n1 - n2 : n2 - n1)) {
 		return false;
 	}
-	
+    	
 	e = 0;
 	r = EDITS_MAX; // remaining edits available
 	i1 = 0;
@@ -60,6 +60,7 @@ int generate_edit_list(char *s1, long n1, char *s2, long n2, edit_t *edits) {
 			i2 += d2;
 		}
 	}
+
 	return true;
 }
 
@@ -110,7 +111,7 @@ int edit_list(edit_t* edits, char *s1, int n1, char *s2, int n2) {
     }
 
 	dedits[n1][n2].cost = 0;
-	dedits[n2][n2].type = EDIT_NOOP;
+	dedits[n1][n2].type = EDIT_NOOP;
 	dedits[n1][n2].next = (dedit_t*) 0x0;
 	dedits[n1][n2].i = -1;
 
