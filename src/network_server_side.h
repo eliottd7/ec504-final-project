@@ -6,73 +6,100 @@
 
 using namespace std;
 
-class Session : public std::enable_shared_from_this<Session> {
+class Session {
 public:
-    explicit Session(boost::asio::io_service &io_service) : _socket(io_service) {}
-
-    boost::asio::ip::tcp::socket &socket() { return _socket; }
+    explicit Session(boost::asio::ip::tcp::socket socket) 
+        : _socket(std::move(socket)) {}
 
     void start() {
-        boost::asio::async_read_until(_socket, buffer, '\n',
-                                      [this](boost::system::error_code ec, std::size_t) {
-                                          if (!ec) handle_request();
-                                      });
-    }
+        std::cout << "Session started, waiting for data..." << std::endl;
+        while (true) {
+            try {
+                // Read data synchronously
+                std::string data = read_data();
+                if (data.empty()) {
+                    std::cout << "Client closed the connection." << std::endl;
+                    break;
+                }
 
-    void handle_request() {
-        // Parse the request from client and perform deduplication
-        // Read the command from the buffer
-        istream is(&buffer);
-        string command;
-        getline(is, command);
-
-        // Parse the command into arguments
-        vector<string> arguments;
-        size_t pos = 0;
-        while ((pos = command.find(' ')) != string::npos) {
-            arguments.push_back(command.substr(0, pos));
-            command.erase(0, pos + 1);
+                std::cout << "Raw data: '" << data << "'" << std::endl;
+                handle_request(data);
+            } catch (const std::exception &e) {
+                std::cerr << "Error: " << e.what() << std::endl;
+                break;
+            }
         }
-        if (!command.empty()) {
-            arguments.push_back(command);
-        }
-
-        // Process the command with CLI parser
-        try {
-            CLI_parser(arguments); 
-        } catch (const string &error) {
-            // Send error back to client
-            string response = error + "\n";
-            boost::asio::write(_socket, boost::asio::buffer(response));
-            return;
-        }
-
-        // Send success message back to client
-        string response = "Command executed successfully\n";
-        boost::asio::write(_socket, boost::asio::buffer(response));
     }
 
 private:
-    boost::asio::ip::tcp::socket _socket; 
-    boost::asio::streambuf buffer;
+    boost::asio::ip::tcp::socket _socket;
+
+    std::string read_data() {
+        boost::asio::streambuf buffer;
+        boost::asio::read_until(_socket, buffer, '\n'); // Synchronous read
+        std::istream is(&buffer);
+        std::string data;
+        std::getline(is, data);
+        return data;
+    }
+
+    void handle_request(const std::string &command) {
+        try {
+            // Parse the command
+            std::vector<std::string> arguments;
+            std::stringstream ss(command);
+            std::string arg;
+            while (ss >> arg) {
+                arguments.push_back(arg);
+            }
+
+            // Process the command with CLI parser
+            CLI_parser(arguments);
+
+            // Send success message back to the client
+            if (_socket.is_open()) {
+                std::string response = "Command executed successfully\n";
+                boost::asio::write(_socket, boost::asio::buffer(response));
+            }
+        } catch (const std::string &error) {
+            // Send error back to the client
+            if (_socket.is_open()) {
+                boost::asio::write(_socket, boost::asio::buffer(error + "\n"));
+            }
+        } catch (const std::exception &e) {
+            // Handle unexpected exceptions
+            if (_socket.is_open()) {
+                std::string error = "ERROR: Unexpected exception: ";
+                error += e.what();
+                error += "\n";
+                boost::asio::write(_socket, boost::asio::buffer(error));
+            }
+        }
+    }
 };
 
 class StorageServer {
 public:
-    StorageServer(int port) : acceptor(io_service, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port)) {
-        start_accept();
-    }
+    explicit StorageServer(int port) 
+        : acceptor(io_service, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port)) {}
 
-    void start_accept() {
-        auto new_session = std::make_shared<Session>(io_service);
-        acceptor.async_accept(new_session->socket(),
-                              [this, new_session](boost::system::error_code ec) {
-                                  if (!ec) new_session->start();
-                                  start_accept();
-                              });
-    }
+    void run() {
+        try {
+            std::cout << "Waiting for a client to connect..." << std::endl;
 
-    void run() { io_service.run(); }
+            // Accept a single connection synchronously
+            boost::asio::ip::tcp::socket socket(io_service);
+            acceptor.accept(socket); // Synchronous accept
+            std::cout << "New connection accepted" << std::endl;
+
+            // Handle the session
+            Session session(std::move(socket));
+            session.start();
+
+        } catch (const std::exception &e) {
+            std::cerr << "Error: " << e.what() << std::endl;
+        }
+    }
 
 private:
     boost::asio::io_service io_service;

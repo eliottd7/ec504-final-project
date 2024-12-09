@@ -1,23 +1,24 @@
 #include "network_server_side.h"
 #include <iostream>
+#include <stdexcept>
+#include <regex>
 
-
-using namespace std; 
+using namespace std;
 
 int main(int argc, char *argv[]) {
     if (argc != 2) {
-        cout << "Usage: " << argv[0] << " <port>" << endl;
+        std::cout << "Usage: " << argv[0] << " <port>" << std::endl;
         return 1;
     }
 
-    int port = stoi(argv[1]);
+    int port = std::stoi(argv[1]);
 
     try {
         StorageServer server(port);
-        cout << "Server running on port " << port << endl;
+        std::cout << "Server running on port " << port << std::endl;
         server.run();
-    } catch (exception &e) {
-        cerr << "Error: " << e.what() << endl;
+    } catch (const std::exception &e) {
+        std::cerr << "Error: " << e.what() << std::endl;
     }
 
     return 0;
