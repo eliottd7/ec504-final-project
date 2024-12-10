@@ -129,10 +129,10 @@ int DDStore::add_document(const char* diffpath, const char* docpath) {
         basefd = openat(basedirfd, basepath, O_RDONLY);
         fstat(basefd, &basest);
         base = (char*)mmap(NULL, basest.st_size, PROT_READ, MAP_SHARED, basefd, 0);
-		if (base == NULL) {
-			perror("couldn't read base");
-			exit(1);
-		}
+        if ( base == NULL ) {
+            perror("couldn't read base");
+            exit(1);
+        }
 
         if ( (match = generate_edit_list(base, basest.st_size, doc, docst.st_size, edits)) ) {
             break;
@@ -161,46 +161,35 @@ int DDStore::add_document(const char* diffpath, const char* docpath) {
     return 0;
 }
 
-int DDStore::get_document_size(const char *diffpath) {
-	int difffd;
-	diff_t *diff;
-    if ((difffd = openat(this->dirfd, diffpath, O_RDONLY)) == -1) {
-		perror("could not open diff");
-		return -1;
-	}
-	diff = (diff_t*) mmap(NULL, sizeof(diff_t), PROT_READ, MAP_SHARED, difffd, 0);
+int DDStore::get_document_size(const char* diffpath) {
+    int difffd;
+    diff_t* diff;
+    if ( (difffd = openat(this->dirfd, diffpath, O_RDONLY)) == -1 ) {
+        perror("could not open diff");
+        return -1;
+    }
+    diff = (diff_t*)mmap(NULL, sizeof(diff_t), PROT_READ, MAP_SHARED, difffd, 0);
     return diff[0].n;
 }
 
-void *DDStore::get_document(int *n, const char *diffpath) {
-	// retrieves file stored at path and places it into malloc'd buffer
-	// stores size of buffer in n
-	// 
-	// returns address of buffer
-	char *base, basepath[16], *doc;
-	long i1, i2;
-	struct stat basest;
-	int basefd, difffd;
-	edit_t *e;
-	diff_t *diff;
+void* DDStore::get_document(int* n, const char* diffpath) {
+    // retrieves file stored at path and places it into malloc'd buffer
+    // stores size of buffer in n
+    //
+    // returns address of buffer
+    char *base, basepath[16], *doc;
+    long i1, i2;
+    struct stat basest;
+    int basefd, difffd;
+    edit_t* e;
+    diff_t* diff;
 
-	if ((difffd = openat(this->dirfd, diffpath, O_RDONLY)) == -1) {
-		perror("could not open diff");
-		return (void*) -1;
-	}
-	
-	diff = (diff_t*) mmap(NULL, sizeof(diff_t), PROT_READ, MAP_SHARED, difffd, 0);
-	
-	sprintf(basepath, "%d", diff->base);
-	if ((basefd = openat(this->basedirfd, basepath, O_RDONLY)) == -1) {
-		perror("could not open basetab");
-		return (void*) -1;
-	}
+    if ( (difffd = openat(this->dirfd, diffpath, O_RDONLY)) == -1 ) {
+        perror("could not open diff");
+        return (void*)-1;
+    }
 
-	fstat(basefd, &basest);
-	base = (char*) mmap(NULL, basest.st_size, PROT_READ, MAP_SHARED, basefd, 0);
-	
-	doc = (char*) malloc(diff->n);
+    diff = (diff_t*)mmap(NULL, sizeof(diff_t), PROT_READ, MAP_SHARED, difffd, 0);
 
     sprintf(basepath, "%d", diff->base);
     if ( (basefd = openat(this->basedirfd, basepath, O_RDONLY)) == -1 ) {
@@ -208,23 +197,45 @@ void *DDStore::get_document(int *n, const char *diffpath) {
         return (void*)-1;
     }
 
-			if (e+1 < &diff->edits[EDITS_MAX])
-				e++;
-		} else {
-			doc[i1] = base[i2];
-			i1++;
-			i2++;
-		}
-	}
-	
-	*n = diff->n;
+    fstat(basefd, &basest);
+    base = (char*)mmap(NULL, basest.st_size, PROT_READ, MAP_SHARED, basefd, 0);
 
-	close(basefd);
-	close(difffd);
-	munmap(diff, sizeof(diff_t));
-	munmap(base, basest.st_size);
+    doc = (char*)malloc(diff->n);
 
-	return (void*) doc;
+    e = &diff->edits[0];
+    i1 = i2 = 0;
+    while ( i1 < diff->n ) {
+        if ( i2 == e->offset ) {
+            if ( e->type == EDIT_MODIFY ) {
+                doc[i1] = e->c;
+                i1++;
+                i2++;
+            }
+            if ( e->type == EDIT_DELETE ) {
+                i2++;
+            }
+            if ( e->type == EDIT_INSERT ) {
+                doc[i1] = e->c;
+                i1++;
+            }
+
+            if ( e + 1 < &diff->edits[EDITS_MAX] )
+                e++;
+        } else {
+            doc[i1] = base[i2];
+            i1++;
+            i2++;
+        }
+    }
+
+    *n = diff->n;
+
+    close(basefd);
+    close(difffd);
+    munmap(diff, sizeof(diff_t));
+    munmap(base, basest.st_size);
+
+    return (void*)doc;
 }
 
 int DDStore::delete_document(const char* diffpath) {
