@@ -71,22 +71,11 @@ string into_dd(string locker_path, string file_name) {
 	if (strlen(file_name) < 1) {
 		throw "Empty file name";
 	}
-	if (strchr(locker_path, '\n') != nullptr) {
+	const string whitespace = "\a\b\f\n\r\t\v";
+	if (strpbrk(locker_path, whitespace) != nullptr) {
 		throw "Invalid locker path";
 	}
-	if (strchr(locker_path, '\t') != nullptr) {
-		throw "Invalid locker path";
-	}
-	if (strchr(locker_path, '\r') != nullptr) {
-		throw "Invalid locker path";
-	}
-	if (strchr(file_name, '\n') != nullptr) {
-		throw "Invalid file name";
-	}
-	if (strchr(file_name, '\t') != nullptr) {
-		throw "Invalid file name";
-	}
-	if (strchr(file_name, '\r') != nullptr) {
+	if (strpbrk(file_name, whitespace) != nullptr) {
 		throw "Invalid file name";
 	}
     string s = locker_path + "/" + file_name;
@@ -108,6 +97,7 @@ void add_file(string locker_path, string file_path) {
     dd.add_document(fp, fp);
 }
 
+//
 void add_file_change_name(string locker_path, string file_path, string file_name) {
     test_path(file_path);
     // todo
@@ -127,7 +117,7 @@ void delete_file(string locker_path, string file_name) {
     dd.delete_document(fp);
 }
 
-void retreive_to_console(string locker_path, string file_name) {
+void retrieve_to_console(string locker_path, string file_name) {
     test_dir(locker_path);
     const char* lp = locker_path.c_str();
     DDStore dd(lp);
@@ -140,7 +130,7 @@ void retreive_to_console(string locker_path, string file_name) {
     cout << endl;
 }
 
-void retreive_to_file(string locker_path, string file_path, string file_name) {
+void retrieve_to_file(string locker_path, string file_path, string file_name) {
     test_dir(locker_path);
     test_path(file_path);
     // todo
@@ -150,7 +140,7 @@ void CLI_parser(vector<string> in) {
     string locker_path, file_path, file_name, old_file_name;
     string command_binary = "0000000";
     string arg, flag;
-    vector<string> flags = {"-locker", "-add", "-rename", "-new-name", "-delete", "-retreive", "-write-to"};
+    vector<string> flags = {"-locker", "-add", "-rename", "-new-name", "-delete", "-retrieve", "-write-to"};
     // bool is_command;
 
     for ( int j = 0; j < in.size(); j++ ) {
@@ -172,7 +162,7 @@ void CLI_parser(vector<string> in) {
                     locker_path = in[j + 1];
                 } else if ( (flag == "-add") || (flag == "-write-to") ) {
                     file_path = in[j + 1];
-                } else if ( (flag == "-new-name") || (flag == "-delete") || (flag == "-retreive") ) {
+                } else if ( (flag == "-new-name") || (flag == "-delete") || (flag == "-retrieve") ) {
                     file_name = in[j + 1];
                 } else if ( flag == "-rename" ) {
                     old_file_name = in[j + 1];
@@ -205,10 +195,10 @@ void CLI_parser(vector<string> in) {
         delete_file(locker_path, file_name);
         break;
     case 1000010: // -locker, -retrieve
-        retreive_to_console(locker_path, file_name);
+        retrieve_to_console(locker_path, file_name);
         break;
     case 1000011: // -locker, -retrieve, -write-to
-        retreive_to_file(locker_path, file_path, file_name);
+        retrieve_to_file(locker_path, file_path, file_name);
         break;
     default:
         CLI_error(); // flags used don't correspond to a command
