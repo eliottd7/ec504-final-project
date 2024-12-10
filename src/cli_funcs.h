@@ -48,7 +48,7 @@ void CLI_error() {
 void test_path(string path) {
     ifstream trying(path);
     if ( !trying ) {
-        string error = "ERROR: Invalid file path";
+        string error = "ERROR: Invalid file path: " + path;
         throw error;
     }
 }
@@ -58,7 +58,7 @@ void test_dir(string path) {
     const char* p = path.c_str();
     int exists = !access(p, F_OK);
     if ( !exists ) {
-        string error = "ERROR: invalid directory";
+        string error = "ERROR: Invalid directory: " + path;
         throw error;
     }
 }
@@ -66,11 +66,12 @@ void test_dir(string path) {
 // converts a locker name and file name into the stored locker name
 string into_dd(string locker_path, string file_name) {
     const string whitespace = "\a\b\f\n\r\t\v";
-    string error = "Invalid locker path";
     if ( strpbrk(locker_path.data(), whitespace.data()) != nullptr ) {
+        string error = "Invalid locker path";
         throw error;
     }
     if ( strpbrk(file_name.data(), whitespace.data()) != nullptr ) {
+        string error = "Invalid file name";
         throw error;
     }
     string s = locker_path + "/" + file_name;
