@@ -176,11 +176,22 @@ void* DDStore::get_document(int* n, const char* diffpath) {
 
     diff = (diff_t*)mmap(NULL, sizeof(diff_t), PROT_READ, MAP_SHARED, difffd, 0);
 
-    sprintf(basepath, "%d", diff->base);
-    if ( (basefd = openat(this->basedirfd, basepath, O_RDONLY)) == -1 ) {
-        perror("could not open basetab");
-        return (void*)-1;
-    }
+	e = &diff->edits[0];
+	i1 = i2 = 0;
+	while (i1 < diff->n) {
+		if (i2 == e->offset) {
+			if (e->type == EDIT_MODIFY) {
+				doc[i1] = e->c;
+				i1++;
+				i2++;
+			}
+			if (e->type == EDIT_DELETE) {
+				i2++;
+			}
+			if (e->type == EDIT_INSERT) {
+				doc[i1] = e->c;
+				i1++;
+			}
 
     fstat(basefd, &basest);
     base = (char*)mmap(NULL, basest.st_size, PROT_READ, MAP_SHARED, basefd, 0);
