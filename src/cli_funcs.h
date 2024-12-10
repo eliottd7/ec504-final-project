@@ -47,9 +47,14 @@ void CLI_error() {
 // checks that the file path is valid
 void test_path(string path) {
     ifstream trying(path);
+    string error = "ERROR: Invalid file path: " + path;
     if ( !trying ) {
-        string error = "ERROR: Invalid file path: " + path;
         throw error;
+    }
+    char foo;
+    trying >> foo;
+    if (trying.fail() || !trying.good()) {
+		throw error;
     }
 }
 
