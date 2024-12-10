@@ -39,3 +39,4 @@ build/*
 hello.txt
 hi.txt
 test-store
+testing/*

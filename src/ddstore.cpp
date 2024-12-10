@@ -71,12 +71,12 @@ DDStore::DDStore(const char* storepath) {
     }
     this->dirfd = open(storepath, O_DIRECTORY | O_RDONLY);
     if ( !exists ) {
-        if ( mkdirat(this->dirfd, "basedocs", DIR_MODE) ) {
-            perror("could not create basedocs directory");
+        if ( mkdirat(this->dirfd, ".ddstore", DIR_MODE) ) {
+            perror("could not create .ddstore directory");
             return;
         }
     }
-    this->basedirfd = openat(dirfd, "basedocs", O_DIRECTORY | O_RDONLY);
+    this->basedirfd = openat(dirfd, ".ddstore", O_DIRECTORY | O_RDONLY);
     if ( !exists ) {
         this->basetabfd = openat(basedirfd, "basetab", O_CREAT | O_TRUNC | O_RDWR, FILE_MODE);
         ftruncate(this->basetabfd, sizeof(int) * 2);
@@ -129,6 +129,10 @@ int DDStore::add_document(const char* diffpath, const char* docpath) {
         basefd = openat(basedirfd, basepath, O_RDONLY);
         fstat(basefd, &basest);
         base = (char*)mmap(NULL, basest.st_size, PROT_READ, MAP_SHARED, basefd, 0);
+		if (base == NULL) {
+			perror("couldn't read base");
+			exit(1);
+		}
 
         if ( (match = generate_edit_list(base, basest.st_size, doc, docst.st_size, edits)) ) {
             break;

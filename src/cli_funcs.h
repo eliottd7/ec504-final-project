@@ -1,11 +1,11 @@
 #pragma once
 
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <stdio.h>
 #include <string>
-#include <cstring>
 #include <vector>
 
 #include <errno.h>
@@ -46,7 +46,7 @@ void CLI_error() {
 
 // checks that the file path is valid
 void test_path(string path) {
-    fstream trying(path);
+    ifstream trying(path);
     if ( !trying ) {
         string error = "ERROR: Invalid file path";
         throw error;
@@ -65,13 +65,14 @@ void test_dir(string path) {
 
 // converts a locker name and file name into the stored locker name
 string into_dd(string locker_path, string file_name) {
-	const string whitespace = "\a\b\f\n\r\t\v";
-	if (strpbrk(locker_path.data(), whitespace.data()) != nullptr) {
-		throw "Invalid locker path";
-	}
-	if (strpbrk(file_name.data(), whitespace.data()) != nullptr) {
-		throw "Invalid file name";
-	}
+    const string whitespace = "\a\b\f\n\r\t\v";
+    string error = "Invalid locker path";
+    if ( strpbrk(locker_path.data(), whitespace.data()) != nullptr ) {
+        throw error;
+    }
+    if ( strpbrk(file_name.data(), whitespace.data()) != nullptr ) {
+        throw error;
+    }
     string s = locker_path + "/" + file_name;
     return s;
 }
@@ -85,22 +86,21 @@ void locker_status(string locker_path) {
     string name;
     int count = 0;
     float size;
-    for (auto const& path:std::filesystem::directory_iterator{locker}) {
-        if(!path.is_directory()) {
+    for ( auto const& path : std::filesystem::directory_iterator{locker} ) {
+        if ( !path.is_directory() ) {
             string name(path.path());
             name = name.substr(name.find_last_of("/\\") + 1);
             size = (float)dd.get_document_size(name.data());
-            for(int i = 0; i < 3; i++) {
-                if(size > 1024) {
+            for ( int i = 0; i < 3; i++ ) {
+                if ( size > 1024 ) {
                     count++;
                     size /= 1024.;
                 }
             }
             cout << name << ": ";
-            if(count) {
-                printf("%4.1f", size); 
-            }
-            else {
+            if ( count ) {
+                printf("%4.1f", size);
+            } else {
                 cout << size;
             }
             cout << " " << prefixes[count] << endl;
@@ -160,7 +160,7 @@ void retrieve_to_file(string locker_path, string file_path, string file_name) {
     int length;
     char* output = (char*)dd.get_document(&length, fp);
     ofstream open_file(file_path);
-    for (int i = 0; i < length; i++ ) {
+    for ( int i = 0; i < length; i++ ) {
         open_file << output[i];
     }
     open_file.close();
@@ -171,43 +171,40 @@ void CLI_parser(vector<string> in) {
     string command_binary = "0000000";
     string arg, flag;
     vector<string> flags = {"-locker", "-file", "-rename", "-new-name", "-delete", "-fetch", "-write-to"};
-    //bool is_command;
+    // bool is_command;
 
-    for(int j = 0; j < in.size(); j++) {
-    if(j + 1 == in.size()) {
-        continue;
-    }
-    arg = in[j];
-    //is_command = false;
-    for(int i = 0; i < flags.size(); i++) {
-        flag = flags[i];
-        size_t found = arg.find(flag);
-        if(found == 0) { // string matches and starts at index 0
-        if(command_binary[i] == '1') {
-            CLI_error(); // that flag was already used
+    for ( unsigned long j = 0; j < in.size(); j++ ) {
+        if ( j + 1 == in.size() ) {
+            continue;
         }
-        command_binary[i] = '1';
-        //is_command = true;
-        if(flag == "-locker") {
-            locker_path = in[j + 1];
-        }
-        else if((flag == "-file") || (flag == "-write-to")) {
-            file_path = in[j + 1];
-        }
-        else if((flag == "-new-name") || (flag == "-delete") || (flag == "-fetch")) {
-            file_name = in[j + 1];
-        }
-        else if(flag == "-rename") {
-            old_file_name = in[j + 1];
-        }
+        arg = in[j];
+        // is_command = false;
+        for ( unsigned long i = 0; i < flags.size(); i++ ) {
+            flag = flags[i];
+            size_t found = arg.find(flag);
+            if ( found == 0 ) { // string matches and starts at index 0
+                if ( command_binary[i] == '1' ) {
+                    CLI_error(); // that flag was already used
+                }
+                command_binary[i] = '1';
+                // is_command = true;
+                if ( flag == "-locker" ) {
+                    locker_path = in[j + 1];
+                } else if ( (flag == "-file") || (flag == "-write-to") ) {
+                    file_path = in[j + 1];
+                } else if ( (flag == "-new-name") || (flag == "-delete") || (flag == "-fetch") ) {
+                    file_name = in[j + 1];
+                } else if ( flag == "-rename" ) {
+                    old_file_name = in[j + 1];
+                }
+            }
         }
     }
+    if ( command_binary[0] == '0' ) {
+        string error = "ERROR: Path to locker must be provided";
+        throw error;
     }
-    if(command_binary[0] == '0') {
-    string error = "ERROR: Path to locker must be provided";
-    throw error;
-    }
-    switch(stoi(command_binary)) {
+    switch ( stoi(command_binary) ) {
     case 1000000: // -locker
         locker_status(locker_path);
         break;
