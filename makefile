@@ -2,7 +2,7 @@ CC = g++
 CXX = g++
 
 COMMON_CFLAGS = -std=c++20
-DEBUG_FLAGS = $(COMMON_CFLAGS) -g -Og
+DEBUG_FLAGS = $(COMMON_CFLAGS) -g -Og -Wall
 RELEASE_FLAGS = $(COMMON_CFLAGS) -O3 -Wall -Werror
 
 SOURCE_DIR = src

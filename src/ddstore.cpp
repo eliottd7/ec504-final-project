@@ -22,9 +22,9 @@ int DDStore::add_base(char* doc, long n) {
     char basepath[16], *base;
 
     i = *this->nextfreebase;
-    *this->nextfreebase++;
+    (*this->nextfreebase)++;
 
-    if ( (*this->nextfreebase + 1) * sizeof(int) > this->basetabst.st_size ) {
+    if ( ((*this->nextfreebase) + 1) * sizeof(int) > (unsigned long)this->basetabst.st_size ) {
         ftruncate(basetabfd, basetabst.st_size + sizeof(int) * 16);
         munmap(this->nextfreebase, this->basetabst.st_size);
 
@@ -92,7 +92,7 @@ DDStore::DDStore(const char* storepath) {
 int DDStore::add_document(const char* diffpath, const char* docpath) {
     // adds the file at path path to the store at path docpath
     // returns 0 on success, -1 otherwise
-    struct stat docst, diffst, basest;
+    struct stat docst, basest;
     char *doc, *base;
     char basepath[16];
     int docfd, basefd, difffd;
@@ -130,7 +130,7 @@ int DDStore::add_document(const char* diffpath, const char* docpath) {
         fstat(basefd, &basest);
         base = (char*)mmap(NULL, basest.st_size, PROT_READ, MAP_SHARED, basefd, 0);
 
-        if ( match = generate_edit_list(base, basest.st_size, doc, docst.st_size, edits) ) {
+        if ( (match = generate_edit_list(base, basest.st_size, doc, docst.st_size, edits)) ) {
             break;
         }
 
@@ -198,22 +198,11 @@ void *DDStore::get_document(int *n, const char *diffpath) {
 	
 	doc = (char*) malloc(diff->n);
 
-	e = &diff->edits[0];
-	i1 = i2 = 0;
-	while (i1 < diff->n) {
-		if (i2 == e->offset) {
-			if (e->type == EDIT_MODIFY) {
-				doc[i1] = e->c;
-				i1++;
-				i2++;
-			}
-			if (e->type == EDIT_DELETE) {
-				i2++;
-			}
-			if (e->type == EDIT_INSERT) {
-				doc[i1] = e->c;
-				i1++;
-			}
+    sprintf(basepath, "%d", diff->base);
+    if ( (basefd = openat(this->basedirfd, basepath, O_RDONLY)) == -1 ) {
+        perror("could not open basetab");
+        return (void*)-1;
+    }
 
 			if (e+1 < &diff->edits[EDITS_MAX])
 				e++;
@@ -267,7 +256,7 @@ int DDStore::generate_edit_list(char* s1, long n1, char* s2, long n2, edit_t* ed
     // to perform transformation
 
     long i1, i2;
-    int e, r, j1, j2, d, b, i0, e1, d1, d2;
+    int e, r, j1, j2, d, b, e1, d1, d2;
 
     if ( EDITS_MAX < (n1 > n2 ? n1 - n2 : n2 - n1) ) {
         return false;
@@ -408,8 +397,7 @@ int DDStore::edit_list(edit_t* edits, char* s1, int n1, char* s2, int n2) {
 }
 
 void print_edit_list(edit_t* edits, int n) {
-    char* ident;
-    char noop[] = "noop";
+    char* ident = {};
     char modify[] = "modify";
     char del[] = "delete";
     char insert[] = "insert";
@@ -428,6 +416,6 @@ void print_edit_list(edit_t* edits, int n) {
             ident = insert;
             break;
         }
-        printf("(%s, %c, %d)\n", ident, e->c, e->offset);
+        printf("(%s, %c, %ld)\n", ident, e->c, e->offset);
     }
 }

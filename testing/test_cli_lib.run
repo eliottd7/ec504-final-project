@@ -3,8 +3,7 @@
 echo "Running CLI library tests"
 mkdir validdir
 mkdir validemptydir
-touch validdir/validfile.txt
-./test_cli_lib.test "validdir" "validdir/validfile.txt" "tmplocker" "validemptydir"
-echo Failed $? "test(s)"
-rm -rd validdir tmplocker
+echo "Hello World" > validdir/validfile.txt
+./test_cli_lib.test "validdir/validfile.txt" "validdir" "tmplocker" "validemptydir"
+rm -rd validdir validemptydir tmplocker
 exit $?
