@@ -1,9 +1,11 @@
 #!/bin/sh
 
-echo "Running CLI library tests"
+printf "\e[36mRunning CLI lib tests ...\e[0m\n"
 mkdir validdir
 mkdir validemptydir
 echo "Hello World" > validdir/validfile.txt
-./test_cli_lib.test "validdir/validfile.txt" "validdir" "tmplocker" "validemptydir"
+printf "\e[37;100mProgram STDOUT:\e[0m\n"
+printf "%s" "$(./test_cli_lib.test "validdir/validfile.txt" "validdir" "tmplocker" "validemptydir")"
+printf "\e[37;100mEND Program STDOUT\e[0m\n"
 rm -rd validdir validemptydir tmplocker
 exit $?

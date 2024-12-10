@@ -61,5 +61,4 @@ testclean:
 test:
 	@echo "Building tests"
 	@make --no-print-directory $(TESTBINARIES)
-	@echo "Running tests"
-	$(TEST_DIR)/run_tests.sh
+	@$(TEST_DIR)/run_tests.sh
