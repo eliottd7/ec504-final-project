@@ -65,17 +65,11 @@ void test_dir(string path) {
 
 // converts a locker name and file name into the stored locker name
 string into_dd(string locker_path, string file_name) {
-	if (strlen(locker_path) < 1 ) {
-		throw "Empty locker path";
-	}
-	if (strlen(file_name) < 1) {
-		throw "Empty file name";
-	}
 	const string whitespace = "\a\b\f\n\r\t\v";
-	if (strpbrk(locker_path, whitespace) != nullptr) {
+	if (strpbrk(locker_path.data(), whitespace.data()) != nullptr) {
 		throw "Invalid locker path";
 	}
-	if (strpbrk(file_name, whitespace) != nullptr) {
+	if (strpbrk(file_name.data(), whitespace.data()) != nullptr) {
 		throw "Invalid file name";
 	}
     string s = locker_path + "/" + file_name;
@@ -85,16 +79,44 @@ string into_dd(string locker_path, string file_name) {
 // prints the status of the locker
 void locker_status(string locker_path) {
     const char* lp = locker_path.c_str();
-    // todo
+    vector<string> prefixes = {"B", "KB", "MB", "GB"};
+    DDStore dd(lp);
+    const std::filesystem::path locker(locker_path);
+    string name;
+    int count = 0;
+    float size;
+    for (auto const& path:std::filesystem::directory_iterator{locker}) {
+        if(!path.is_directory()) {
+            string name(path.path());
+            name = name.substr(name.find_last_of("/\\") + 1);
+            size = (float)dd.get_document_size(name.data());
+            for(int i = 0; i < 3; i++) {
+                if(size > 1024) {
+                    count++;
+                    size /= 1024.;
+                }
+            }
+            cout << name << ": ";
+            if(count) {
+                printf("%4.1f", size); 
+            }
+            else {
+                cout << size;
+            }
+            cout << " " << prefixes[count] << endl;
+        }
+    }
 }
 
 // inserts a file into the locker
 void add_file(string locker_path, string file_path) {
     test_path(file_path);
+    string name = file_path.substr(file_path.find_last_of("/\\") + 1);
     const char* lp = locker_path.c_str();
     DDStore dd(lp);
     const char* fp = file_path.c_str();
-    dd.add_document(fp, fp);
+    const char* n = name.c_str();
+    dd.add_document(fp, n);
 }
 
 //
@@ -127,7 +149,6 @@ void retrieve_to_console(string locker_path, string file_name) {
     for ( int i = 0; i < length; i++ ) {
         cout << output[i];
     }
-    cout << endl;
 }
 
 void retrieve_to_file(string locker_path, string file_path, string file_name) {
@@ -138,11 +159,10 @@ void retrieve_to_file(string locker_path, string file_path, string file_name) {
     const char* fp = file_name.c_str();
     int length;
     char* output = (char*)dd.get_document(&length, fp);
-    ofstream open_file("filename.txt");
+    ofstream open_file(file_path);
     for (int i = 0; i < length; i++ ) {
         open_file << output[i];
     }
-    open_file << endl;
     open_file.close();
 }
 
@@ -204,12 +224,27 @@ void CLI_parser(vector<string> in) {
         delete_file(locker_path, file_name);
         break;
     case 1000010: // -locker, -fetch
-        retreive_to_console(locker_path, file_name);
+        retrieve_to_console(locker_path, file_name);
         break;
     case 1000011: // -locker, -fetch, -write-to
-        retreive_to_file(locker_path, file_path, file_name);
+        retrieve_to_file(locker_path, file_path, file_name);
         break;
     default:
         CLI_error(); // flags used don't correspond to a command
     }
+}
+
+int call_dd(int argc, char** argv) {
+    vector<string> CLI_input;
+    for ( int i = 1; i < argc; i++ ) {
+        string s(argv[i]);
+        CLI_input.push_back(s);
+    }
+    try {
+        CLI_parser(CLI_input);
+    } catch ( string error ) {
+        cout << error << endl;
+        return -1;
+    }
+    return 0;
 }

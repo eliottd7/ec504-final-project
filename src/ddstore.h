@@ -74,6 +74,9 @@ public:
     // match the new document, adds it as a base
     int add_document(const char* diffpath, const char* docpath);
 
+    // returns the size of a file, as it was stored, in bytes
+    int get_document_size(const char *diffpath);
+
     // returns a pointer to a malloc'd buffer of the document specified
     // by the diff at diffpath. Writes the size of the buffer, in bytes
     // to n
