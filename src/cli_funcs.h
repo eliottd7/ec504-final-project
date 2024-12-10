@@ -65,17 +65,11 @@ void test_dir(string path) {
 
 // converts a locker name and file name into the stored locker name
 string into_dd(string locker_path, string file_name) {
-	if (strlen(locker_path) < 1 ) {
-		throw "Empty locker path";
-	}
-	if (strlen(file_name) < 1) {
-		throw "Empty file name";
-	}
 	const string whitespace = "\a\b\f\n\r\t\v";
-	if (strpbrk(locker_path, whitespace) != nullptr) {
+	if (strpbrk(locker_path.data(), whitespace.data()) != nullptr) {
 		throw "Invalid locker path";
 	}
-	if (strpbrk(file_name, whitespace) != nullptr) {
+	if (strpbrk(file_name.data(), whitespace.data()) != nullptr) {
 		throw "Invalid file name";
 	}
     string s = locker_path + "/" + file_name;
@@ -197,10 +191,10 @@ void CLI_parser(vector<string> in) {
       delete_file(locker_path, file_name);
       break;
     case 1000010: // -locker, -fetch
-      retreive_to_console(locker_path, file_name);
+      retrieve_to_console(locker_path, file_name);
       break;
     case 1000011: // -locker, -fetch, -write-to
-      retreive_to_file(locker_path, file_path, file_name);
+      retrieve_to_file(locker_path, file_path, file_name);
       break;
     default:
         CLI_error(); // flags used don't correspond to a command
