@@ -24,11 +24,15 @@ all: debug
 # Rules
 debug: $(SRCFILES)
 	@mkdir -p $(BUILD_DIR)
-	$(CC) $(DEBUG_FLAGS) -o $(BUILD_DIR)/$@ src/main.cpp $^
+	$(CC) $(DEBUG_FLAGS) -o $(BUILD_DIR)/$@ src/debug_main.cpp $^
+
+cli_debug: $(SRCFILES)
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(DEBUG_FLAGS) -o $(BUILD_DUR)/$@ src/cli_main.cpp $^
 
 release: $(SRCFILES)
 	@mkdir -p $(BUILD_DIR)
-	$(CC) $(RELEASE_FLAGS) -o $(BUILD_DIR)/$@ $^
+	$(CC) $(RELEASE_FLAGS) -o $(BUILD_DIR)/$@ src/cli_main.cpp $^
 
 %.test: %.cpp
 	@mkdir -p $(TEST_DIR)
