@@ -192,6 +192,8 @@ void* DDStore::get_document(int* n, const char* diffpath) {
 				doc[i1] = e->c;
 				i1++;
 			}
+        }
+    }
 
     fstat(basefd, &basest);
     base = (char*)mmap(NULL, basest.st_size, PROT_READ, MAP_SHARED, basefd, 0);
