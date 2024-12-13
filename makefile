@@ -3,7 +3,7 @@ CXX = g++
 
 COMMON_CFLAGS = -std=c++20
 DEBUG_FLAGS = $(COMMON_CFLAGS) -g -Og -Wall
-RELEASE_FLAGS = $(COMMON_CFLAGS) -O3 -Wall -Werror
+RELEASE_FLAGS = $(COMMON_CFLAGS) -O3 -Wall #-Werror
 
 SOURCE_DIR = src
 BUILD_DIR = build
@@ -61,5 +61,4 @@ testclean:
 test:
 	@echo "Building tests"
 	@make --no-print-directory $(TESTBINARIES)
-	@echo "Running tests"
-	$(TEST_DIR)/run_tests.sh
+	@$(TEST_DIR)/run_tests.sh

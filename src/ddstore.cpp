@@ -102,12 +102,12 @@ int DDStore::add_document(const char* diffpath, const char* docpath) {
     diff_t diff;
 
     if ( stat(docpath, &docst) ) {
-        perror("could not access document");
+        perror("Could not access document");
         return 1;
     }
 
     if ( faccessat(this->dirfd, diffpath, F_OK, 0) == 0 ) {
-        dprintf(2, "cannot add document to store. Path already exists\n");
+        dprintf(2, "Cannot add document %s to store. Path already exists\n", diffpath);
         return 1;
     }
 
@@ -151,8 +151,7 @@ int DDStore::add_document(const char* diffpath, const char* docpath) {
     diff.base = i;
     diff.n = docst.st_size;
     memcpy(diff.edits, edits, sizeof(edit_t) * EDITS_MAX);
-
-    difffd = openat(dirfd, docpath, O_CREAT | O_RDWR | O_TRUNC, FILE_MODE);
+    difffd = openat(dirfd, diffpath, O_CREAT | O_RDWR | O_TRUNC, FILE_MODE);
     write(difffd, &diff, sizeof(diff_t));
     close(difffd);
 
