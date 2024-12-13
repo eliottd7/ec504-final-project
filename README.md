@@ -21,33 +21,25 @@ Chosen Extensions (up to 35% of the final grade):
 
 ## Command Line Interface
 - Format example:
-	- `store -file="path/to/filename" -locker="path/to/locker" -new-name="file01`
-- Output to command line:
-	- `file01 saved`
-	- `Locker contents: N files, XX.X KB/MB/GB used`
-- 7 flags:
-	- -locker="path/to/locker"
-	- -add="path/to/filename"
- 	- -rename="name"
- 	- -new-name="name"
- 	- -delete="name"
- 	- -retrieve="name"
- 	- -write-to="path/to/filename"
-- 7 commands can be built from these flags (flags can be in any order):
+	- `store -file <path/to/filename> -locker <path/to/locker> -save-as .`
+- 5 flags:
+	- -locker
+	- -add
+ 	- -delete
+ 	- -fetch
+ 	- -save-as
+- 4 commands can be built from these flags (flags can be in any order):
 	- locker status
  		- store -locker
 	- add file
- 		- store -locker, -add
-	- add file and change its name
- 		- store -locker, -add, -new-name
-	- rename file
- 		- store -locker, -rename, -new-name
+ 		- store -locker, -add, -save-as
+   			- "-save-as ." will keep the file's name
 	- delete file
  		- store -locker, -delete
-	- print file to console
- 		- store -locker, -retrieve
-	- write file to path
- 		- store -locker, -retrieve, -new-name
+	- reconstruct file
+ 		- store -locker, -fetch, -save-as
+   			- "-fetch ." will reconstruct everything in storage
+      		- "-save-as ." will place the reconstructed files in the current directory
 
 ## References
 
