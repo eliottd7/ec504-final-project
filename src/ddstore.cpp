@@ -7,6 +7,7 @@ using namespace std;
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <string>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -63,17 +64,16 @@ DDStore::DDStore(const char* storepath) {
 
     if ( !exists ) {
         if ( mkdir(storepath, DIR_MODE) ) {
-            perror("could not create new ddstore");
-            return;
-        } else {
-            dprintf(2, "ddstore created\n");
+            string _dp(storepath);
+            string _err = "Could not create new ddstore at '" + _dp + "'";
+            throw _err;
         }
     }
     this->dirfd = open(storepath, O_DIRECTORY | O_RDONLY);
     if ( !exists ) {
         if ( mkdirat(this->dirfd, ".ddstore", DIR_MODE) ) {
-            perror("could not create .ddstore directory");
-            return;
+            string _err = "Could not create .ddstore subdirectory";
+            throw _err;
         }
     }
     this->basedirfd = openat(dirfd, ".ddstore", O_DIRECTORY | O_RDONLY);
@@ -102,13 +102,15 @@ int DDStore::add_document(const char* diffpath, const char* docpath) {
     diff_t diff;
 
     if ( stat(docpath, &docst) ) {
-        perror("Could not access document");
-        return 1;
+        string _dp(docpath);
+        string _err = "Could not access document " + _dp;
+        throw _err;
     }
 
     if ( faccessat(this->dirfd, diffpath, F_OK, 0) == 0 ) {
-        dprintf(2, "Cannot add document %s to store. Path already exists\n", diffpath);
-        return 1;
+        string _dp(docpath);
+        string _err = _dp + " already exists in locker";
+        throw _err;
     }
 
     for ( int i = 0; i < EDITS_MAX; i++ ) {
@@ -130,7 +132,7 @@ int DDStore::add_document(const char* diffpath, const char* docpath) {
         fstat(basefd, &basest);
         base = (char*)mmap(NULL, basest.st_size, PROT_READ, MAP_SHARED, basefd, 0);
         if ( base == NULL ) {
-            perror("couldn't read base");
+            string _err = "Couldn't read base. Locker may be corrupted";
             exit(1);
         }
 
@@ -164,8 +166,9 @@ int DDStore::get_document_size(const char* diffpath) {
     int difffd;
     diff_t* diff;
     if ( (difffd = openat(this->dirfd, diffpath, O_RDONLY)) == -1 ) {
-        perror("could not open diff");
-        return -1;
+        string _dp(diffpath);
+        string _err = "Could not open diff at '" + _dp + "'. Locker may be corrupted";
+        throw _err;
     }
     diff = (diff_t*)mmap(NULL, sizeof(diff_t), PROT_READ, MAP_SHARED, difffd, 0);
     return diff[0].n;
@@ -184,16 +187,18 @@ void* DDStore::get_document(int* n, const char* diffpath) {
     diff_t* diff;
 
     if ( (difffd = openat(this->dirfd, diffpath, O_RDONLY)) == -1 ) {
-        perror("could not open diff");
-        return (void*)-1;
+        string _dp(diffpath);
+        string _err = "Could not open diff at '" + _dp + "'. Locker may be corrupted";
+        throw _err;
     }
 
     diff = (diff_t*)mmap(NULL, sizeof(diff_t), PROT_READ, MAP_SHARED, difffd, 0);
 
     sprintf(basepath, "%d", diff->base);
     if ( (basefd = openat(this->basedirfd, basepath, O_RDONLY)) == -1 ) {
-        perror("could not open basetab");
-        return (void*)-1;
+        string _dp(basepath);
+        string _err = "Could not open basetab at '" + _dp + "'. Locker may be corrupted";
+        throw _err;
     }
 
     fstat(basefd, &basest);
@@ -241,9 +246,11 @@ int DDStore::delete_document(const char* diffpath) {
     diff_t* diff;
     int difffd;
 
-    if ( faccessat(this->dirfd, diffpath, F_OK, 0) ) {
-        dprintf(2, "can't remove diff: file does not exist");
+    if ( faccessat(this->dirfd, diffpath, F_OK, AT_EMPTY_PATH) ) {
         return 1;
+        string _dp(diffpath);
+        string _err = "File '" + _dp + "' does not exist";
+        throw _err;
     }
 
     difffd = openat(this->dirfd, diffpath, O_RDWR);

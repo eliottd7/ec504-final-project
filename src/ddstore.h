@@ -22,9 +22,8 @@ typedef enum {
 // A a single character edit
 struct edit_t {
     EditType type;
-    char c;      // The character that is inserted. If type == EDIT_DELETE, this is meaningless.
-    long offset; // Offset within document where this edit occurs. XXX we will need to decide if offset refers to the offset from the
-                 // beginning of the original document, or if it refers to the offset after all previous edits have been applied
+    char c;      // The inserted character. If type == EDIT_DELETE, this is meaningless.
+    long offset; // Offset within document where this edit occurs.
 };
 
 // a single character edit as it appears in dist.cpp
@@ -55,18 +54,17 @@ private:
     int* basetab;
     struct stat basetabst;
 
+private:
     int add_base(char* doc, long n);
     int delete_base(int i);
 
-private:
-	// ddstore-internal functions
 	static int generate_edit_list(char*, long, char*, long, edit_t*);
 	static int edit_list(edit_t*, char*, int, char*, int);
 	static int dist(char* s1, int i1, char* s2, int i2, dedit_t** edits);
 
 public:
     // opens the DDStore located at storepath. Creates one if it
-    // does not already exists.
+    // does not already exist.
     DDStore(const char* storepath);
 
     // adds a document located at docpath to the store as a diff
