@@ -1,5 +1,6 @@
 #!/bin/bash
 
+rm -rd ./tmplocker/
 mkdir validdir
 echo "hello world" > validdir/validfile.txt
 mkdir validemptydir

@@ -1,11 +1,14 @@
 #!/bin/sh
 
 printf "\e[36mRunning CLI lib tests ...\e[0m\n"
-mkdir validdir
-mkdir validemptydir
+mkdir validdir 2>/dev/null
+mkdir validemptydir 2>/dev/null
 echo "Hello World" > validdir/validfile.txt
-printf "\e[37;100mProgram STDOUT:\e[0m\n"
-printf "%s" "$(./test_cli_lib.test "validdir/validfile.txt" "validdir" "tmplocker" "validemptydir")"
-printf "\e[37;100mEND Program STDOUT\e[0m\n"
-rm -rd validdir validemptydir tmplocker
-exit $?
+$(./test_cli_lib.test "validfile.txt" "validdir" "tmplocker" "validemptydir" "alternate" 1>/tmp/tstdout 2>/tmp/tstderr)
+RESULT=$?
+printf "\e[37;100mOutput:\e[0m\n"
+printf "%s" "$(cat /tmp/tstdout)"
+printf "\e[31m%s\e[0m" "$(cat /tmp/tstderr)"
+printf "\n\e[37;100mEnd of Output\e[0m\n"
+rm -rdf validdir validemptydir tmplocker alternate*
+exit $RESULT

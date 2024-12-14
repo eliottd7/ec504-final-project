@@ -2,10 +2,9 @@
 
 cd testing/
 
-total_fails=0
+FAILURES=0
 for file in `find . -name '*.run'`; do
-	echo "Running $file"
-    ./"$file"
-    total_fails=$((total_fails + $?))
+    ./$file
+    FAILURES=$(($FAILURES + $?))
 done
-echo "Overall, $total_fails tests failed."
+printf "Overall, \e[34m%d\e[0m tests failed." $FAILURES
