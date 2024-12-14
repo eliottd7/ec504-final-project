@@ -60,7 +60,7 @@ void locker_status(string locker_path) {
             name = name.substr(locker_path.size() + 1);
             size = (float)dd.get_document_size(name.data());
             for ( int i = 0; i < 3; i++ ) {
-                if ( size > 1024 ) {
+                if ( size >= 1024 ) {
                     count++;
                     size /= 1024.;
                 }
@@ -215,6 +215,11 @@ void CLI_parser(vector<string> in) {
             if ( found == 0 ) { // string matches and starts at index 0
                 if ( command_binary[i] == '1' ) {
                     CLI_error(); // that flag was already used
+                }
+                for ( unsigned long h = 0; h < flags.size(); h++ ) {
+                    if ( in[j + 1].find(flags[h]) == 0 ) {
+                        CLI_error(); // the input is another flag
+                    }
                 }
                 command_binary[i] = '1';
                 if ( flag == "--locker" ) {
